@@ -1,5 +1,12 @@
 import type { RelativeTime, TimeStamp, Context } from '@datadog/browser-core'
-import { ONE_SECOND, getTimeStamp, display, DefaultPrivacyLevel } from '@datadog/browser-core'
+import {
+  updateExperimentalFeatures,
+  resetExperimentalFeatures,
+  ONE_SECOND,
+  getTimeStamp,
+  display,
+  DefaultPrivacyLevel,
+} from '@datadog/browser-core'
 import { cleanupSyntheticsWorkerValues, mockSyntheticsWorkerValues } from '../../../core/test/syntheticsWorkerValues'
 import { initEventBridgeStub, deleteEventBridgeStub } from '../../../core/test/specHelper'
 import type { TestSetupBuilder } from '../../test/specHelper'
@@ -13,6 +20,7 @@ const noopStartRum = (): ReturnType<StartRum> => ({
   addAction: () => undefined,
   addError: () => undefined,
   addTiming: () => undefined,
+  addFeatureFlags: () => undefined,
   startView: () => undefined,
   getInternalContext: () => undefined,
   lifeCycle: {} as any,
@@ -598,6 +606,61 @@ describe('rum public api', () => {
 
       expect(addTimingSpy.calls.argsFor(0)[0]).toEqual('foo')
       expect(addTimingSpy.calls.argsFor(0)[1]).toBe(12 as RelativeTime)
+      expect(displaySpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('addFeatureFlags', () => {
+    let addFeatureFlagsSpy: jasmine.Spy<ReturnType<StartRum>['addFeatureFlags']>
+    let displaySpy: jasmine.Spy<() => void>
+    let rumPublicApi: RumPublicApi
+    let setupBuilder: TestSetupBuilder
+
+    beforeEach(() => {
+      addFeatureFlagsSpy = jasmine.createSpy()
+      displaySpy = spyOn(display, 'error')
+      rumPublicApi = makeRumPublicApi(
+        () => ({
+          ...noopStartRum(),
+          addFeatureFlags: addFeatureFlagsSpy,
+        }),
+        noopRecorderApi
+      )
+      setupBuilder = setup()
+    })
+
+    afterEach(() => {
+      setupBuilder.cleanup()
+    })
+
+    afterEach(() => {
+      resetExperimentalFeatures()
+    })
+
+    it('should add feature flags when ff feature_flags enable', () => {
+      updateExperimentalFeatures(['feature_flags'])
+
+      rumPublicApi.init(DEFAULT_INIT_CONFIGURATION)
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      ;(rumPublicApi as any).addFeatureFlags({ feature: 'foo' })
+
+      expect(addFeatureFlagsSpy.calls.argsFor(0)[0]).toEqual({ feature: 'foo' })
+      expect(displaySpy).not.toHaveBeenCalled()
+    })
+
+    it('API should not be available when ff feature_flags disabled', () => {
+      rumPublicApi.init(DEFAULT_INIT_CONFIGURATION)
+
+      expect(Object.keys(rumPublicApi)).not.toContain('addFeatureFlags')
+      expect(displaySpy).not.toHaveBeenCalled()
+    })
+
+    it('API should not be available before init when ff feature_flags enabled', () => {
+      updateExperimentalFeatures(['feature_flags'])
+
+      expect(Object.keys(rumPublicApi)).not.toContain('addFeatureFlags')
+
       expect(displaySpy).not.toHaveBeenCalled()
     })
   })
