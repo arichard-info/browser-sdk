@@ -6,6 +6,7 @@ import type {
   Subscription,
   RelativeTime,
   Context,
+  ContextValue,
 } from '@datadog/browser-core'
 import {
   isExperimentalFeatureEnabled,
@@ -176,8 +177,8 @@ export function trackViews(
       currentView.addTiming(name, time)
       currentView.scheduleUpdate()
     },
-    addFeatureFlagEvaluations: (featureFlagEvaluations: Context) => {
-      currentView.addFeatureFlagEvaluations(featureFlagEvaluations)
+    addFeatureFlagEvaluation: (key: string, value: ContextValue) => {
+      currentView.addFeatureFlagEvaluation(key, value)
       currentView.scheduleUpdate()
     },
     startView: (options?: ViewOptions, startClocks?: ClocksState) => {
@@ -299,9 +300,9 @@ function newView(
       const relativeTime = looksLikeRelativeTime(time) ? time : elapsed(startClocks.timeStamp, time)
       customTimings[sanitizeTiming(name)] = relativeTime
     },
-    addFeatureFlagEvaluations(newFeatureFlagEvaluations: Context) {
+    addFeatureFlagEvaluation(key: string, value: ContextValue) {
       if (isExperimentalFeatureEnabled('feature_flags')) {
-        assign(featureFlagEvaluations, newFeatureFlagEvaluations)
+        assign(featureFlagEvaluations, { [key]: value })
       }
     },
   }

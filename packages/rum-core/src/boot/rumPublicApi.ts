@@ -90,8 +90,8 @@ export function makeRumPublicApi(
     bufferApiCalls.add(() => addErrorStrategy(providedError, commonContext))
   }
 
-  let addFeatureFlagEvaluationsStrategy: StartRumResult['addFeatureFlagEvaluations'] = (featureFlagEvaluations) => {
-    bufferApiCalls.add(() => addFeatureFlagEvaluationsStrategy(featureFlagEvaluations))
+  let addFeatureFlagEvaluationStrategy: StartRumResult['addFeatureFlagEvaluation'] = (key: string, value: any) => {
+    bufferApiCalls.add(() => addFeatureFlagEvaluationStrategy(key, value))
   }
 
   function initRum(initConfiguration: RumInitConfiguration) {
@@ -119,8 +119,8 @@ export function makeRumPublicApi(
     }
 
     if (isExperimentalFeatureEnabled('feature_flags')) {
-      ;(rumPublicApi as any).addFeatureFlagEvaluations = monitor((featureFlagEvaluations: object) => {
-        addFeatureFlagEvaluationsStrategy(featureFlagEvaluations as Context)
+      ;(rumPublicApi as any).addFeatureFlagEvaluation = monitor((key: string, value: any) => {
+        addFeatureFlagEvaluationStrategy(key, value)
       })
     }
 
@@ -165,7 +165,7 @@ export function makeRumPublicApi(
       addAction: addActionStrategy,
       addError: addErrorStrategy,
       addTiming: addTimingStrategy,
-      addFeatureFlagEvaluations: addFeatureFlagEvaluationsStrategy,
+      addFeatureFlagEvaluation: addFeatureFlagEvaluationStrategy,
       getInternalContext: getInternalContextStrategy,
     } = startRumResults)
     bufferApiCalls.drain()

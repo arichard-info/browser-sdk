@@ -595,9 +595,12 @@ describe('view feature flag evaluations', () => {
     updateExperimentalFeatures(['feature_flags'])
 
     const { clock } = setupBuilder.build()
-    const { getViewUpdate, addFeatureFlagEvaluations } = viewTest
+    const { getViewUpdate, addFeatureFlagEvaluation } = viewTest
 
-    addFeatureFlagEvaluations({ feature: 'foo', feature2: 2, feature3: true, feature4: { foo: 'bar' } })
+    addFeatureFlagEvaluation('feature', 'foo')
+    addFeatureFlagEvaluation('feature2', 2)
+    addFeatureFlagEvaluation('feature3', true)
+    addFeatureFlagEvaluation('feature4', { foo: 'bar' })
 
     clock.tick(THROTTLE_VIEW_UPDATE_PERIOD + 1)
 
@@ -610,14 +613,15 @@ describe('view feature flag evaluations', () => {
     })
   })
 
-  it('should replace existing feature flag evaluations to the current view if the ff feature_flags is enabled', () => {
+  it('should replace existing feature flag evaluation to the current view if the ff feature_flags is enabled', () => {
     updateExperimentalFeatures(['feature_flags'])
 
     const { clock } = setupBuilder.build()
-    const { getViewUpdate, addFeatureFlagEvaluations } = viewTest
+    const { getViewUpdate, addFeatureFlagEvaluation } = viewTest
 
-    addFeatureFlagEvaluations({ feature: 'foo', feature2: 'baz' })
-    addFeatureFlagEvaluations({ feature: 'bar' })
+    addFeatureFlagEvaluation('feature', 'foo')
+    addFeatureFlagEvaluation('feature2', 'baz')
+    addFeatureFlagEvaluation('feature', 'bar')
 
     clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
 
@@ -625,12 +629,11 @@ describe('view feature flag evaluations', () => {
     expect(view.featureFlagEvaluations).toEqual({ feature: 'bar', feature2: 'baz' })
   })
 
-  it('should not add feature flag evaluations to the current view if the ff feature_flags is disabled', () => {
+  it('should not add feature flag evaluation to the current view if the ff feature_flags is disabled', () => {
     const { clock } = setupBuilder.build()
-    const { getViewUpdate, addFeatureFlagEvaluations } = viewTest
+    const { getViewUpdate, addFeatureFlagEvaluation } = viewTest
 
-    addFeatureFlagEvaluations({ feature: 'foo', feature2: 'baz' })
-    addFeatureFlagEvaluations({ feature: 'bar' })
+    addFeatureFlagEvaluation('feature', 'bar')
 
     clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
 
