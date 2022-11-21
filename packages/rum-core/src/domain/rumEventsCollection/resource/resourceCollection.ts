@@ -8,7 +8,7 @@ import {
   assign,
   isNumber,
 } from '@datadog/browser-core'
-import type { ClocksState } from '@datadog/browser-core'
+import type { ClocksState, Duration } from '@datadog/browser-core'
 import type { RumConfiguration } from '../../configuration'
 import type { RumPerformanceEntry, RumPerformanceResourceTiming } from '../../../browser/performanceCollection'
 import type {
@@ -66,6 +66,13 @@ function processRequest(
   const tracingInfo = computeRequestTracingInfo(request, configuration)
   const indexingInfo = computeIndexingInfo(sessionManager, startClocks)
 
+  let durationDiff
+  let durationPercentageDiff
+  if (request.resolveDuration) {
+    durationDiff = toServerDuration((request.duration - request.resolveDuration) as Duration)
+    durationPercentageDiff = Math.round((durationDiff / toServerDuration(request.duration)) * 100)
+  }
+
   const resourceEvent = combine(
     {
       date: startClocks.timeStamp,
@@ -76,6 +83,11 @@ function processRequest(
         method: request.method,
         status_code: request.status,
         url: request.url,
+      },
+      _dd: {
+        resolveDuration: toServerDuration(request.resolveDuration),
+        durationDiff,
+        durationPercentageDiff,
       },
       type: RumEventType.RESOURCE as const,
     },
