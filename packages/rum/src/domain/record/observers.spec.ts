@@ -1,4 +1,4 @@
-import { DefaultPrivacyLevel, isIE, relativeNow, timeStampNow } from '@datadog/browser-core'
+import { DefaultPrivacyLevel, isIE, noop, relativeNow, timeStampNow } from '@datadog/browser-core'
 import type { RawRumActionEvent, RumConfiguration } from '@datadog/browser-rum-core'
 import { ActionType, LifeCycle, LifeCycleEventType, RumEventType, FrustrationType } from '@datadog/browser-rum-core'
 import type { RawRumEventCollectedData } from 'packages/rum-core/src/domain/lifeCycle'
@@ -29,10 +29,15 @@ describe('initInputObserver', () => {
     sandbox.appendChild(input)
     document.body.appendChild(sandbox)
 
-    serializeDocument(document, DEFAULT_CONFIGURATION, {
-      status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT,
-      elementsScrollPositions: createElementsScrollPositions(),
-    })
+    serializeDocument(
+      document,
+      DEFAULT_CONFIGURATION,
+      {
+        status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT,
+        elementsScrollPositions: createElementsScrollPositions(),
+      },
+      noop
+    )
   })
 
   afterEach(() => {
@@ -43,6 +48,17 @@ describe('initInputObserver', () => {
   it('collects input values when an "input" event is dispatched', () => {
     stopInputObserver = initInputObserver(inputCallbackSpy, DefaultPrivacyLevel.ALLOW)
     dispatchInputEvent('foo')
+
+    expect(inputCallbackSpy).toHaveBeenCalledOnceWith({
+      text: 'foo',
+      id: jasmine.any(Number) as unknown as number,
+    })
+  })
+
+  // cannot trigger a event in a Shadow DOM because event with `isTrusted:false` do not cross the root
+  it('collects input values when an "input" event is composed', () => {
+    stopInputObserver = initInputObserver(inputCallbackSpy, DefaultPrivacyLevel.ALLOW)
+    dispatchComposedInputEvent('foo')
 
     expect(inputCallbackSpy).toHaveBeenCalledOnceWith({
       text: 'foo',
@@ -79,6 +95,13 @@ describe('initInputObserver', () => {
   function dispatchInputEvent(newValue: string) {
     input.value = newValue
     input.dispatchEvent(createNewEvent('input', { target: input }))
+  }
+
+  function dispatchComposedInputEvent(newValue: string) {
+    input.value = newValue
+    const event = createNewEvent('input', { target: sandbox, composed: true })
+    event.composedPath = () => [input, sandbox, document.body]
+    input.dispatchEvent(event)
   }
 })
 
@@ -173,10 +196,15 @@ describe('initStyleSheetObserver', () => {
     document.head.appendChild(styleElement)
     styleSheet = styleElement.sheet!
 
-    serializeDocument(document, DEFAULT_CONFIGURATION, {
-      status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT,
-      elementsScrollPositions: createElementsScrollPositions(),
-    })
+    serializeDocument(
+      document,
+      DEFAULT_CONFIGURATION,
+      {
+        status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT,
+        elementsScrollPositions: createElementsScrollPositions(),
+      },
+      noop
+    )
   })
 
   afterEach(() => {
