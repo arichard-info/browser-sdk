@@ -36,7 +36,6 @@ import type { MutationController } from './mutationObserver'
 import { startMutationObserver } from './mutationObserver'
 import { getVisualViewport, getScrollX, getScrollY, convertMouseEventToLayoutCoordinates } from './viewports'
 import type { ElementsScrollPositions } from './elementsScrollPositions'
-import type { ShadowDomCallBack } from './serialize'
 
 const MOUSE_MOVE_OBSERVER_THRESHOLD = 50
 const SCROLL_OBSERVER_THRESHOLD = 100
@@ -97,16 +96,10 @@ interface ObserverParam {
   styleSheetCb: StyleSheetCallback
   focusCb: FocusCallback
   frustrationCb: FrustrationCallback
-  shadowDomCreatedCallback: ShadowDomCallBack
 }
 
 export function initObservers(o: ObserverParam): ListenerHandler {
-  const mutationHandler = initMutationObserver(
-    o.mutationController,
-    o.mutationCb,
-    o.configuration,
-    o.shadowDomCreatedCallback
-  )
+  const mutationHandler = initMutationObserver(o.mutationController, o.mutationCb, o.configuration)
   const mousemoveHandler = initMoveObserver(o.mousemoveCb)
   const mouseInteractionHandler = initMouseInteractionObserver(
     o.mouseInteractionCb,
@@ -139,19 +132,18 @@ export function initObservers(o: ObserverParam): ListenerHandler {
   }
 }
 
-export function initMutationObserver(
+function initMutationObserver(
   mutationController: MutationController,
   cb: MutationCallBack,
-  configuration: RumConfiguration,
-  shadowDomCreatedCallback: ShadowDomCallBack
+  configuration: RumConfiguration
 ) {
-  return startMutationObserver(mutationController, cb, configuration, shadowDomCreatedCallback, document).stop
+  return startMutationObserver(mutationController, cb, configuration).stop
 }
 
 function initMoveObserver(cb: MousemoveCallBack): ListenerHandler {
   const { throttled: updatePosition } = throttle(
     monitor((event: MouseEvent | TouchEvent) => {
-      const target = getEventTarget(event)
+      const target = event.target as Node
       if (hasSerializedNode(target)) {
         const { clientX, clientY } = isTouchEvent(event) ? event.changedTouches[0] : event
         const position: MousePosition = {
@@ -196,7 +188,7 @@ function initMouseInteractionObserver(
   defaultPrivacyLevel: DefaultPrivacyLevel
 ): ListenerHandler {
   const handler = (event: MouseEvent | TouchEvent) => {
-    const target = getEventTarget(event)
+    const target = event.target as Node
     if (getNodePrivacyLevel(target, defaultPrivacyLevel) === NodePrivacyLevel.HIDDEN || !hasSerializedNode(target)) {
       return
     }
@@ -232,7 +224,7 @@ function initScrollObserver(
 ): ListenerHandler {
   const { throttled: updatePosition } = throttle(
     monitor((event: UIEvent) => {
-      const target = getEventTarget(event) as HTMLElement | Document
+      const target = event.target as HTMLElement | Document
       if (
         !target ||
         getNodePrivacyLevel(target, defaultPrivacyLevel) === NodePrivacyLevel.HIDDEN ||
@@ -267,15 +259,7 @@ function initViewportResizeObserver(cb: ViewportResizeCallback): ListenerHandler
   return initViewportObservable().subscribe(cb).unsubscribe
 }
 
-type InputObserverOptions = {
-  domEvents?: Array<DOM_EVENT.INPUT | DOM_EVENT.CHANGE>
-  target?: Node
-}
-export function initInputObserver(
-  cb: InputCallback,
-  defaultPrivacyLevel: DefaultPrivacyLevel,
-  { domEvents = [DOM_EVENT.INPUT, DOM_EVENT.CHANGE], target = document }: InputObserverOptions = {}
-): ListenerHandler {
+export function initInputObserver(cb: InputCallback, defaultPrivacyLevel: DefaultPrivacyLevel): ListenerHandler {
   const lastInputStateMap: WeakMap<Node, InputState> = new WeakMap()
 
   function onElementChange(target: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
@@ -341,16 +325,15 @@ export function initInputObserver(
   }
 
   const { stop: stopEventListeners } = addEventListeners(
-    target,
-    domEvents,
+    document,
+    [DOM_EVENT.INPUT, DOM_EVENT.CHANGE],
     (event) => {
-      const target = getEventTarget(event)
       if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement
       ) {
-        onElementChange(target)
+        onElementChange(event.target)
       }
     },
     {
@@ -435,7 +418,7 @@ function initMediaInteractionObserver(
   defaultPrivacyLevel: DefaultPrivacyLevel
 ): ListenerHandler {
   const handler = (event: Event) => {
-    const target = getEventTarget(event)
+    const target = event.target as Node
     if (
       !target ||
       getNodePrivacyLevel(target, defaultPrivacyLevel) === NodePrivacyLevel.HIDDEN ||
@@ -505,11 +488,4 @@ export function initFrustrationObserver(lifeCycle: LifeCycle, frustrationCb: Fru
       })
     }
   }).unsubscribe
-}
-
-function getEventTarget(event: Event): Node {
-  if (!event.composed) {
-    return event.target as Node
-  }
-  return event.composedPath()[0] as Node
 }

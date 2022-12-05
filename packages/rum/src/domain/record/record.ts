@@ -1,10 +1,9 @@
 import type { TimeStamp } from '@datadog/browser-core'
-import { DOM_EVENT, timeStampNow } from '@datadog/browser-core'
+import { timeStampNow } from '@datadog/browser-core'
 import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
 import { getViewportDimension } from '@datadog/browser-rum-core'
 import type {
   BrowserMutationData,
-  BrowserMutationPayload,
   BrowserRecord,
   InputData,
   MediaInteractionData,
@@ -15,10 +14,9 @@ import type {
 } from '../../types'
 import { RecordType, IncrementalSource } from '../../types'
 import { serializeDocument, SerializationContextStatus } from './serialize'
-import { initInputObserver, initObservers } from './observers'
-import type { InputCallback } from './observers'
+import { initObservers } from './observers'
 
-import { MutationController, startMutationObserver } from './mutationObserver'
+import { MutationController } from './mutationObserver'
 import { getVisualViewport, getScrollX, getScrollY } from './viewports'
 import { assembleIncrementalSnapshot } from './utils'
 import { createElementsScrollPositions } from './elementsScrollPositions'
@@ -44,19 +42,6 @@ export function record(options: RecordOptions): RecordAPI {
 
   const mutationController = new MutationController()
   const elementsScrollPositions = createElementsScrollPositions()
-
-  const mutationCb = (mutation: BrowserMutationPayload) =>
-    emit(assembleIncrementalSnapshot<BrowserMutationData>(IncrementalSource.Mutation, mutation))
-  const inputCb: InputCallback = (s) => emit(assembleIncrementalSnapshot<InputData>(IncrementalSource.Input, s))
-
-  const shadowDomCreatedCallback = (shadowRoot: ShadowRoot) => {
-    startMutationObserver(mutationController, mutationCb, options.configuration, shadowDomCreatedCallback, shadowRoot)
-    // the change event no do bubble up across the shadow root, we have to listen on the shadow root
-    initInputObserver(inputCb, options.configuration.defaultPrivacyLevel, {
-      target: shadowRoot,
-      domEvents: [DOM_EVENT.CHANGE],
-    })
-  }
 
   const takeFullSnapshot = (
     timestamp = timeStampNow(),
@@ -84,7 +69,7 @@ export function record(options: RecordOptions): RecordAPI {
 
     emit({
       data: {
-        node: serializeDocument(document, options.configuration, serializationContext, shadowDomCreatedCallback),
+        node: serializeDocument(document, options.configuration, serializationContext),
         initialOffset: {
           left: getScrollX(),
           top: getScrollY(),
@@ -134,7 +119,6 @@ export function record(options: RecordOptions): RecordAPI {
         timestamp: timeStampNow(),
       })
     },
-    shadowDomCreatedCallback,
   })
 
   return {
