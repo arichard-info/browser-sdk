@@ -88,9 +88,6 @@ describe('resourceCollection', () => {
       type: RumEventType.RESOURCE,
       _dd: {
         discarded: false,
-        resolveDuration: undefined,
-        durationDiff: undefined,
-        durationPercentageDiff: undefined,
         computed_duration: 100000000,
         performance_entry_duration: undefined,
       },
@@ -169,9 +166,6 @@ describe('resourceCollection', () => {
       type: RumEventType.RESOURCE,
       _dd: {
         discarded: false,
-        resolveDuration: (50 * 1e6) as ServerDuration,
-        durationDiff: (50 * 1e6) as ServerDuration,
-        durationPercentageDiff: 50,
         computed_duration: 100000000,
         performance_entry_duration: undefined,
       },
