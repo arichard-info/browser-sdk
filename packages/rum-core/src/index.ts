@@ -36,3 +36,13 @@ export { initViewportObservable, getViewportDimension } from './browser/viewport
 export { RumInitConfiguration, RumConfiguration } from './domain/configuration'
 export { DEFAULT_PROGRAMMATIC_ACTION_NAME_ATTRIBUTE } from './domain/rumEventsCollection/action/getActionNameFromElement'
 export { STABLE_ATTRIBUTES } from './domain/rumEventsCollection/action/getSelectorFromElement'
+export {
+  isTextNode,
+  isCommentNode,
+  isElementNode,
+  isShadowRoot,
+  getChildNodes,
+  getParentNode,
+  getNodeOrShadowHost,
+  isNodeShadowHost,
+} from './browser/htmlDomUtils'

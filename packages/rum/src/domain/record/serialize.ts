@@ -1,6 +1,6 @@
-import { assign, startsWith } from '@datadog/browser-core'
+import { assign, isExperimentalFeatureEnabled, startsWith } from '@datadog/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { STABLE_ATTRIBUTES } from '@datadog/browser-rum-core'
+import { isNodeShadowHost, getChildNodes, STABLE_ATTRIBUTES } from '@datadog/browser-rum-core'
 import {
   NodePrivacyLevel,
   PRIVACY_ATTR_NAME,
@@ -61,24 +61,29 @@ export type SerializationContext =
       elementsScrollPositions: ElementsScrollPositions
     }
 
+export type ShadowDomCallBack = (shadowRoot: ShadowRoot) => void
+
 export interface SerializeOptions {
   serializedNodeIds?: Set<number>
   ignoreWhiteSpace?: boolean
   parentNodePrivacyLevel: ParentNodePrivacyLevel
   serializationContext: SerializationContext
   configuration: RumConfiguration
+  shadowDomCreatedCallback: ShadowDomCallBack
 }
 
 export function serializeDocument(
   document: Document,
   configuration: RumConfiguration,
-  serializationContext: SerializationContext
+  serializationContext: SerializationContext,
+  shadowDomCreatedCallback: ShadowDomCallBack
 ): SerializedNodeWithId {
   // We are sure that Documents are never ignored, so this function never returns null
   return serializeNodeWithId(document, {
     serializationContext,
     parentNodePrivacyLevel: configuration.defaultPrivacyLevel,
     configuration,
+    shadowDomCreatedCallback,
   })!
 }
 
@@ -178,7 +183,7 @@ export function serializeElementNode(element: Element, options: SerializeOptions
   const attributes = getAttributesForPrivacyLevel(element, nodePrivacyLevel, options)
 
   let childNodes: SerializedNodeWithId[] = []
-  if (element.childNodes.length) {
+  if (getChildNodes(element).length) {
     // OBJECT POOLING OPTIMIZATION:
     // We should not create a new object systematically as it could impact performances. Try to reuse
     // the same object as much as possible, and clone it only if we need to.
@@ -194,12 +199,18 @@ export function serializeElementNode(element: Element, options: SerializeOptions
     childNodes = serializeChildNodes(element, childNodesSerializationOptions)
   }
 
+  const isShadowHost = isExperimentalFeatureEnabled('record_shadow_dom') && isNodeShadowHost(element)
+  if (isShadowHost) {
+    options.shadowDomCreatedCallback(element.shadowRoot)
+  }
+
   return {
     type: NodeType.Element,
     tagName,
     attributes,
     childNodes,
     isSVG,
+    isShadowHost: isShadowHost || undefined,
   }
 }
 
@@ -232,8 +243,9 @@ function serializeCDataNode(): CDataNode {
 
 export function serializeChildNodes(node: Node, options: SerializeOptions): SerializedNodeWithId[] {
   const result: SerializedNodeWithId[] = []
+  const childNodes = isExperimentalFeatureEnabled('record_shadow_dom') ? getChildNodes(node) : node.childNodes
 
-  forEach(node.childNodes, (childNode) => {
+  forEach(childNodes, (childNode) => {
     const serializedChildNode = serializeNodeWithId(childNode, options)
     if (serializedChildNode) {
       result.push(serializedChildNode)

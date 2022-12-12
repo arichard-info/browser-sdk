@@ -4,6 +4,7 @@ import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
 import { getViewportDimension } from '@datadog/browser-rum-core'
 import type {
   BrowserMutationData,
+  BrowserMutationPayload,
   BrowserRecord,
   InputData,
   MediaInteractionData,
@@ -15,11 +16,12 @@ import type {
 import { RecordType, IncrementalSource } from '../../types'
 import { serializeDocument, SerializationContextStatus } from './serialize'
 import { initObservers } from './observers'
+import type { InputCallback } from './observers'
 
-import { MutationController } from './mutationObserver'
 import { getVisualViewport, getScrollX, getScrollY } from './viewports'
 import { assembleIncrementalSnapshot } from './utils'
 import { createElementsScrollPositions } from './elementsScrollPositions'
+import { withShadowDomHelpers } from './shadowDom'
 
 export interface RecordOptions {
   emit?: (record: BrowserRecord) => void
@@ -27,10 +29,16 @@ export interface RecordOptions {
   lifeCycle: LifeCycle
 }
 
+interface ShadowDomCallBacks {
+  stop: () => void
+  flush: () => void
+}
 export interface RecordAPI {
   stop: () => void
   takeSubsequentFullSnapshot: (timestamp?: TimeStamp) => void
+  // the following is only used for testing purposes
   flushMutations: () => void
+  shadowDomCallBacks: Map<ShadowRoot, ShadowDomCallBacks>
 }
 
 export function record(options: RecordOptions): RecordAPI {
@@ -40,14 +48,29 @@ export function record(options: RecordOptions): RecordAPI {
     throw new Error('emit function is required')
   }
 
-  const mutationController = new MutationController()
   const elementsScrollPositions = createElementsScrollPositions()
+
+  const mutationCb = (mutation: BrowserMutationPayload) => {
+    emit(assembleIncrementalSnapshot<BrowserMutationData>(IncrementalSource.Mutation, mutation))
+  }
+  const inputCb: InputCallback = (s) => emit(assembleIncrementalSnapshot<InputData>(IncrementalSource.Input, s))
+
+  const {
+    shadowDomCallBacks,
+    flush: flushMutationsFromShadowRoots,
+    shadowDomCreatedCallback,
+    shadowDomRemovedCallback,
+  } = withShadowDomHelpers(options.configuration, { mutationCb, inputCb })
 
   const takeFullSnapshot = (
     timestamp = timeStampNow(),
-    serializationContext = { status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT, elementsScrollPositions }
+    serializationContext = { status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT, elementsScrollPositions },
+    flushMutationsFromPreviousFs?: () => void
   ) => {
-    mutationController.flush() // process any pending mutation before taking a full snapshot
+    flushMutationsFromShadowRoots()
+    if (flushMutationsFromPreviousFs) {
+      flushMutationsFromPreviousFs() // process any pending mutation before taking a full snapshot
+    }
     const { width, height } = getViewportDimension()
     emit({
       data: {
@@ -69,7 +92,7 @@ export function record(options: RecordOptions): RecordAPI {
 
     emit({
       data: {
-        node: serializeDocument(document, options.configuration, serializationContext),
+        node: serializeDocument(document, options.configuration, serializationContext, shadowDomCreatedCallback),
         initialOffset: {
           left: getScrollX(),
           top: getScrollY(),
@@ -90,17 +113,16 @@ export function record(options: RecordOptions): RecordAPI {
 
   takeFullSnapshot()
 
-  const stopObservers = initObservers({
+  const { stop: stopObservers, flush: flushMutations } = initObservers({
     lifeCycle: options.lifeCycle,
     configuration: options.configuration,
-    mutationController,
     elementsScrollPositions,
-    inputCb: (v) => emit(assembleIncrementalSnapshot<InputData>(IncrementalSource.Input, v)),
+    inputCb,
     mediaInteractionCb: (p) =>
       emit(assembleIncrementalSnapshot<MediaInteractionData>(IncrementalSource.MediaInteraction, p)),
     mouseInteractionCb: (mouseInteractionRecord) => emit(mouseInteractionRecord),
     mousemoveCb: (positions, source) => emit(assembleIncrementalSnapshot<MousemoveData>(source, { positions })),
-    mutationCb: (m) => emit(assembleIncrementalSnapshot<BrowserMutationData>(IncrementalSource.Mutation, m)),
+    mutationCb,
     scrollCb: (p) => emit(assembleIncrementalSnapshot<ScrollData>(IncrementalSource.Scroll, p)),
     styleSheetCb: (r) => emit(assembleIncrementalSnapshot<StyleSheetRuleData>(IncrementalSource.StyleSheetRule, r)),
     viewportResizeCb: (d) => emit(assembleIncrementalSnapshot<ViewportResizeData>(IncrementalSource.ViewportResize, d)),
@@ -119,15 +141,26 @@ export function record(options: RecordOptions): RecordAPI {
         timestamp: timeStampNow(),
       })
     },
+    shadowDomCallBacks: { shadowDomCreatedCallback, shadowDomRemovedCallback },
   })
-
   return {
-    stop: stopObservers,
+    stop: () => {
+      shadowDomCallBacks.forEach(({ stop }) => stop())
+      stopObservers()
+    },
     takeSubsequentFullSnapshot: (timestamp) =>
-      takeFullSnapshot(timestamp, {
-        status: SerializationContextStatus.SUBSEQUENT_FULL_SNAPSHOT,
-        elementsScrollPositions,
-      }),
-    flushMutations: () => mutationController.flush(),
+      takeFullSnapshot(
+        timestamp,
+        {
+          status: SerializationContextStatus.SUBSEQUENT_FULL_SNAPSHOT,
+          elementsScrollPositions,
+        },
+        flushMutations
+      ),
+    flushMutations: () => {
+      flushMutationsFromShadowRoots()
+      flushMutations()
+    },
+    shadowDomCallBacks,
   }
 }
