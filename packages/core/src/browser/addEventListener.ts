@@ -1,5 +1,6 @@
 import { monitor } from '../tools/monitor'
 import { getZoneJsOriginalValue } from '../tools/getZoneJsOriginalValue'
+import { listenerWithTelemetry } from '../tools/listenerWithTelemetry'
 
 export const enum DOM_EVENT {
   BEFORE_UNLOAD = 'beforeunload',
@@ -78,12 +79,10 @@ export function addEventListeners<E extends Event>(
   { once, capture, passive }: AddEventListenerOptions = {}
 ) {
   const wrappedListener = monitor(
-    once
-      ? (event: Event) => {
-          stop()
-          listener(event as E)
-        }
-      : (listener as (event: Event) => void)
+    listenerWithTelemetry((event: Event) => {
+      if (once) stop()
+      listener(event as E)
+    })
   )
 
   const options = passive ? { capture, passive } : capture
