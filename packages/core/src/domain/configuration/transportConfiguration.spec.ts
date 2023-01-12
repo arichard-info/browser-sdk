@@ -71,9 +71,9 @@ describe('transportConfiguration', () => {
     ].forEach(({ site, intakeDomain }) => {
       it(`should detect intake request for ${site} site`, () => {
         const configuration = computeTransportConfiguration({ clientToken, site })
-        expect(configuration.isIntakeUrl(`https://rum.${intakeDomain}/api/v2/rum?xxx`)).toBe(true)
-        expect(configuration.isIntakeUrl(`https://logs.${intakeDomain}/api/v2/logs?xxx`)).toBe(true)
-        expect(configuration.isIntakeUrl(`https://session-replay.${intakeDomain}/api/v2/replay?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/rum?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/logs?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/replay?xxx`)).toBe(true)
       })
     })
 
@@ -92,11 +92,9 @@ describe('transportConfiguration', () => {
 
     it('should handle sites with subdomains', () => {
       const configuration = computeTransportConfiguration({ clientToken, site: 'foo.datadoghq.com' })
-      expect(configuration.isIntakeUrl('https://rum.browser-intake-foo-datadoghq.com/api/v2/rum?xxx')).toBe(true)
-      expect(configuration.isIntakeUrl('https://logs.browser-intake-foo-datadoghq.com/api/v2/logs?xxx')).toBe(true)
-      expect(
-        configuration.isIntakeUrl('https://session-replay.browser-intake-foo-datadoghq.com/api/v2/replay?xxx')
-      ).toBe(true)
+      expect(configuration.isIntakeUrl('https://browser-intake-foo-datadoghq.com/api/v2/rum?xxx')).toBe(true)
+      expect(configuration.isIntakeUrl('https://browser-intake-foo-datadoghq.com/api/v2/logs?xxx')).toBe(true)
+      expect(configuration.isIntakeUrl('https://browser-intake-foo-datadoghq.com/api/v2/replay?xxx')).toBe(true)
     })
 
     it('should detect proxy intake request', () => {
@@ -124,9 +122,9 @@ describe('transportConfiguration', () => {
           internalAnalyticsSubdomain,
         })
 
-        expect(configuration.isIntakeUrl(`https://rum.${intakeDomain}/api/v2/rum?xxx`)).toBe(true)
-        expect(configuration.isIntakeUrl(`https://logs.${intakeDomain}/api/v2/logs?xxx`)).toBe(true)
-        expect(configuration.isIntakeUrl(`https://session-replay.${intakeDomain}/api/v2/replay?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/rum?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/logs?xxx`)).toBe(true)
+        expect(configuration.isIntakeUrl(`https://${intakeDomain}/api/v2/replay?xxx`)).toBe(true)
 
         expect(configuration.isIntakeUrl(`https://${internalAnalyticsSubdomain}.datadoghq.com/api/v2/rum?xxx`)).toBe(
           true
