@@ -149,23 +149,23 @@ function command(...templateArguments) {
  * The resulting command arguments is a list of strings generated as if the template literal was
  * split on white spaces. For example:
  *
- * parseCommandArguments`foo bar` == ['foo', 'bar']
- * parseCommandArguments`foo ${'bar'} baz` == ['foo', 'bar', 'baz']
+ * parseCommandTemplateArguments`foo bar` == ['foo', 'bar']
+ * parseCommandTemplateArguments`foo ${'bar'} baz` == ['foo', 'bar', 'baz']
  *
  * Template variables are considered as part of the previous or next command argument if they are
  * not separated with a space:
  *
- * parseCommandArguments`foo${'bar'} baz` == ['foobar', 'baz']
- * parseCommandArguments`foo ${'bar'}baz` == ['foo', 'barbaz']
- * parseCommandArguments`foo${'bar'}baz` == ['foobarbaz']
+ * parseCommandTemplateArguments`foo${'bar'} baz` == ['foobar', 'baz']
+ * parseCommandTemplateArguments`foo ${'bar'}baz` == ['foo', 'barbaz']
+ * parseCommandTemplateArguments`foo${'bar'}baz` == ['foobarbaz']
  *
  * Template variables are never split on white spaces, allowing to pass any arbitrary argument to
  * the command without worrying on shell escaping:
  *
- * parseCommandArguments`foo ${'bar baz'}` == ['foo', 'bar baz']
+ * parseCommandTemplateArguments`foo ${'bar baz'}` == ['foo', 'bar baz']
  *
  * const commitMessage = 'my commit message'
- * parseCommandArguments`git commit -c ${commitMessage}` == ['git', 'commit', '-c', 'my commit message']
+ * parseCommandTemplateArguments`git commit -c ${commitMessage}` == ['git', 'commit', '-c', 'my commit message']
  *
  * [1]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates
  */
