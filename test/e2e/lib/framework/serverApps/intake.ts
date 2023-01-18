@@ -44,7 +44,7 @@ function computeIntakeType(
     throw new Error('ddforward is missing')
   }
 
-  if (ddforward === 'bridge') {
+  if (req.query.bridge === 'true') {
     const eventType = req.query.event_type
     return {
       isBridge: true,
@@ -53,8 +53,8 @@ function computeIntakeType(
   }
 
   let intakeType: IntakeType
-  const forwardUrl = new URL(ddforward)
-  const endpoint = forwardUrl.pathname.split('/').pop()
+  // ddforward = /api/v2/rum?key=value
+  const endpoint = ddforward.split(/[/?]/)[3]
   if (endpoint === 'logs' || endpoint === 'rum') {
     intakeType = endpoint
   } else if (endpoint === 'replay' && req.busboy) {
