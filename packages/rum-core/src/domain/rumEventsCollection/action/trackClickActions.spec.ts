@@ -495,7 +495,12 @@ describe('trackClickActions', () => {
 
     function emulateActivityIfNeeded(event: 'pointerup' | 'click') {
       if (activity && (activity.on ?? 'click') === event) {
-        setupBuilder.clock!.tick(activity.delay ?? BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY)
+        if (activity.delay && activity.delay < 0) {
+          // Do not use `.tick()` here because negative clock tick does not work since jasmine 4: https://github.com/jasmine/jasmine/pull/1948
+          setupBuilder.clock!.setDate(new Date(Date.now() + activity.delay))
+        } else {
+          setupBuilder.clock!.tick(activity.delay ?? BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY)
+        }
         // Since we don't collect dom mutations for this test, manually dispatch one
         setupBuilder.domMutationObservable.notify()
       }
