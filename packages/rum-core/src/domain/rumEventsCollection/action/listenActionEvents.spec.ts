@@ -1,4 +1,3 @@
-import { resetExperimentalFeatures, updateExperimentalFeatures } from '@datadog/browser-core'
 import type { Clock } from '../../../../../core/test/specHelper'
 import { createNewEvent, mockClock } from '../../../../../core/test/specHelper'
 import type { ActionEventsHooks } from './listenActionEvents'
@@ -6,14 +5,14 @@ import { listenActionEvents } from './listenActionEvents'
 
 describe('listenActionEvents', () => {
   let actionEventsHooks: {
-    onActionStart: jasmine.Spy<ActionEventsHooks<object>['onActionStart']>
+    onClick: jasmine.Spy<ActionEventsHooks<object>['onClick']>
     onPointerDown: jasmine.Spy<ActionEventsHooks<object>['onPointerDown']>
   }
   let stopListenEvents: () => void
 
   beforeEach(() => {
     actionEventsHooks = {
-      onActionStart: jasmine.createSpy(),
+      onClick: jasmine.createSpy(),
       onPointerDown: jasmine.createSpy().and.returnValue({}),
     }
     ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
@@ -28,32 +27,11 @@ describe('listenActionEvents', () => {
     expect(actionEventsHooks.onPointerDown).toHaveBeenCalledOnceWith(jasmine.objectContaining({ type: 'pointerdown' }))
   })
 
-  it('ignore non-primary pointerdown events', () => {
-    emulateClick({
-      beforeMouseUp() {
-        window.dispatchEvent(createNewEvent('pointerdown', { target: document.body, isPrimary: false }))
-      },
-    })
-    expect(actionEventsHooks.onPointerDown).toHaveBeenCalledTimes(1)
-  })
-
   it('listen to click events', () => {
     emulateClick()
-    expect(actionEventsHooks.onActionStart).toHaveBeenCalledOnceWith(
+    expect(actionEventsHooks.onClick).toHaveBeenCalledOnceWith(
       {},
       jasmine.objectContaining({ type: 'click' }),
-      jasmine.any(Function),
-      jasmine.any(Function)
-    )
-  })
-
-  it('listen to non-primary click events', () => {
-    // This emulates a Chrome behavior where all click events are non-primary
-    emulateClick({ clickEventIsPrimary: false })
-    expect(actionEventsHooks.onActionStart).toHaveBeenCalledOnceWith(
-      {},
-      jasmine.objectContaining({ type: 'click' }),
-      jasmine.any(Function),
       jasmine.any(Function)
     )
   })
@@ -66,46 +44,23 @@ describe('listenActionEvents', () => {
   it('can abort click lifecycle by returning undefined from the onPointerDown callback', () => {
     actionEventsHooks.onPointerDown.and.returnValue(undefined)
     emulateClick()
-    expect(actionEventsHooks.onActionStart).not.toHaveBeenCalled()
+    expect(actionEventsHooks.onClick).not.toHaveBeenCalled()
   })
 
-  it('passes the context created in onPointerDown to onActionStart', () => {
+  it('passes the context created in onPointerDown to onClick', () => {
     const context = {}
     actionEventsHooks.onPointerDown.and.returnValue(context)
     emulateClick()
-    expect(actionEventsHooks.onActionStart.calls.mostRecent().args[0]).toBe(context)
+    expect(actionEventsHooks.onClick.calls.mostRecent().args[0]).toBe(context)
   })
 
   it('ignore "click" events if no "pointerdown" event happened since the previous "click" event', () => {
     emulateClick()
-    actionEventsHooks.onActionStart.calls.reset()
+    actionEventsHooks.onClick.calls.reset()
 
     window.dispatchEvent(createNewEvent('click', { target: document.body }))
 
-    expect(actionEventsHooks.onActionStart).not.toHaveBeenCalled()
-  })
-
-  describe('click_action_on_pointerup experimental feature', () => {
-    beforeEach(() => {
-      stopListenEvents()
-
-      updateExperimentalFeatures(['click_action_on_pointerup'])
-      ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
-    })
-
-    afterEach(() => {
-      resetExperimentalFeatures()
-    })
-
-    it('listen to pointerup events', () => {
-      emulateClick()
-      expect(actionEventsHooks.onActionStart).toHaveBeenCalledOnceWith(
-        {},
-        jasmine.objectContaining({ type: 'pointerup' }),
-        jasmine.any(Function),
-        jasmine.any(Function)
-      )
-    })
+    expect(actionEventsHooks.onClick).not.toHaveBeenCalled()
   })
 
   describe('selection change', () => {
@@ -177,7 +132,7 @@ describe('listenActionEvents', () => {
     })
 
     function hasSelectionChanged() {
-      return actionEventsHooks.onActionStart.calls.mostRecent().args[2]().selection
+      return actionEventsHooks.onClick.calls.mostRecent().args[2]().selection
     }
 
     function emulateNodeSelection(
@@ -242,20 +197,16 @@ describe('listenActionEvents', () => {
       window.dispatchEvent(createNewEvent('input'))
     }
     function hasInputUserActivity() {
-      return actionEventsHooks.onActionStart.calls.mostRecent().args[2]().input
+      return actionEventsHooks.onClick.calls.mostRecent().args[2]().input
     }
   })
 
-  function emulateClick({
-    beforeMouseUp,
-    target = document.body,
-    clickEventIsPrimary = undefined,
-  }: { beforeMouseUp?(): void; target?: Node; clickEventIsPrimary?: boolean } = {}) {
-    window.dispatchEvent(createNewEvent('pointerdown', { target, isPrimary: true }))
+  function emulateClick({ beforeMouseUp, target = document.body }: { beforeMouseUp?(): void; target?: Node } = {}) {
+    window.dispatchEvent(createNewEvent('pointerdown', { target }))
     window.dispatchEvent(createNewEvent('mousedown', { target }))
     beforeMouseUp?.()
-    window.dispatchEvent(createNewEvent('pointerup', { target, isPrimary: true }))
+    window.dispatchEvent(createNewEvent('pointerup', { target }))
     window.dispatchEvent(createNewEvent('mouseup', { target }))
-    window.dispatchEvent(createNewEvent('click', { target, isPrimary: clickEventIsPrimary }))
+    window.dispatchEvent(createNewEvent('click', { target }))
   }
 })

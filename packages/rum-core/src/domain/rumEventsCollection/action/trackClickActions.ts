@@ -24,7 +24,7 @@ import type { ClickChain } from './clickChain'
 import { createClickChain } from './clickChain'
 import { getActionNameFromElement } from './getActionNameFromElement'
 import { getSelectorFromElement } from './getSelectorFromElement'
-import type { MouseEventOnElement, UserActivity } from './listenActionEvents'
+import type { MouseEventOnElement, GetUserActivity } from './listenActionEvents'
 import { listenActionEvents } from './listenActionEvents'
 import { computeFrustration } from './computeFrustration'
 
@@ -51,7 +51,6 @@ export interface ClickAction {
   event: MouseEventOnElement
   frustrationTypes: FrustrationType[]
   events: Event[]
-  pointerUpDelay?: Duration
 }
 
 export interface ActionContexts {
@@ -81,8 +80,8 @@ export function trackClickActions(
 
   const { stop: stopActionEventsListener } = listenActionEvents<ClickActionBase>({
     onPointerDown: (pointerDownEvent) => processPointerDown(configuration, history, pointerDownEvent),
-    onActionStart: (clickActionBase, startEvent, getUserActivity, getClickEventTimeStamp) =>
-      startClickAction(
+    onClick: (clickActionBase, clickEvent, getUserActivity) =>
+      processClick(
         configuration,
         lifeCycle,
         domMutationObservable,
@@ -90,9 +89,8 @@ export function trackClickActions(
         stopObservable,
         appendClickToClickChain,
         clickActionBase,
-        startEvent,
-        getUserActivity,
-        getClickEventTimeStamp
+        clickEvent,
+        getUserActivity
       ),
   })
 
@@ -147,7 +145,7 @@ function processPointerDown(
   return clickActionBase
 }
 
-function startClickAction(
+function processClick(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
   domMutationObservable: Observable<void>,
@@ -155,11 +153,10 @@ function startClickAction(
   stopObservable: Observable<void>,
   appendClickToClickChain: (click: Click) => void,
   clickActionBase: ClickActionBase,
-  startEvent: MouseEventOnElement,
-  getUserActivity: () => UserActivity,
-  getClickEventTimeStamp: () => TimeStamp | undefined
+  clickEvent: MouseEventOnElement,
+  getUserActivity: GetUserActivity
 ) {
-  const click = newClick(lifeCycle, history, getUserActivity, getClickEventTimeStamp, clickActionBase, startEvent)
+  const click = newClick(lifeCycle, history, getUserActivity, clickActionBase, clickEvent)
 
   if (configuration.trackFrustrations) {
     appendClickToClickChain(click)
@@ -249,10 +246,9 @@ export type Click = ReturnType<typeof newClick>
 function newClick(
   lifeCycle: LifeCycle,
   history: ClickActionIdHistory,
-  getUserActivity: () => UserActivity,
-  getClickEventTimeStamp: () => TimeStamp | undefined,
+  getUserActivity: GetUserActivity,
   clickActionBase: ClickActionBase,
-  startEvent: MouseEventOnElement
+  clickEvent: MouseEventOnElement
 ) {
   const id = generateUUID()
   const startClocks = clocksNow()
@@ -284,7 +280,7 @@ function newClick(
   }
 
   return {
-    event: startEvent,
+    event: clickEvent,
     stop,
     stopObservable,
 
@@ -302,7 +298,7 @@ function newClick(
 
     isStopped: () => status === ClickStatus.STOPPED || status === ClickStatus.FINALIZED,
 
-    clone: () => newClick(lifeCycle, history, getUserActivity, getClickEventTimeStamp, clickActionBase, startEvent),
+    clone: () => newClick(lifeCycle, history, getUserActivity, clickActionBase, clickEvent),
 
     validate: (domEvents?: Event[]) => {
       stop()
@@ -311,7 +307,6 @@ function newClick(
       }
 
       const { resourceCount, errorCount, longTaskCount } = eventCountsSubscription.eventCounts
-      const clickEventTimeStamp = getClickEventTimeStamp()
       const clickAction: ClickAction = assign(
         {
           type: ActionType.CLICK as const,
@@ -324,9 +319,8 @@ function newClick(
             errorCount,
             longTaskCount,
           },
-          events: domEvents ?? [startEvent],
-          event: startEvent,
-          pointerUpDelay: clickEventTimeStamp && elapsed(startClocks.timeStamp, clickEventTimeStamp),
+          events: domEvents ?? [clickEvent],
+          event: clickEvent,
         },
         clickActionBase
       )

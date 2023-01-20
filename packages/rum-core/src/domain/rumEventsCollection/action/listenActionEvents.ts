@@ -1,41 +1,27 @@
-import type { TimeStamp } from '@datadog/browser-core'
-import { addEventListener, DOM_EVENT, isExperimentalFeatureEnabled, timeStampNow } from '@datadog/browser-core'
+import { addEventListener, DOM_EVENT, monitor } from '@datadog/browser-core'
 
 export type MouseEventOnElement = MouseEvent & { target: Element }
 
-export interface UserActivity {
-  selection: boolean
-  input: boolean
-}
+export type GetUserActivity = () => { selection: boolean; input: boolean }
 export interface ActionEventsHooks<ClickContext> {
   onPointerDown: (event: MouseEventOnElement) => ClickContext | undefined
-  onActionStart: (
-    context: ClickContext,
-    event: MouseEventOnElement,
-    getUserActivity: () => UserActivity,
-    getClickEventTimeStamp: () => TimeStamp | undefined
-  ) => void
+  onClick: (context: ClickContext, event: MouseEventOnElement, getUserActivity: GetUserActivity) => void
 }
 
-export function listenActionEvents<ClickContext>({ onPointerDown, onActionStart }: ActionEventsHooks<ClickContext>) {
+export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: ActionEventsHooks<ClickContext>) {
+  let hasSelectionChanged = false
   let selectionEmptyAtPointerDown: boolean
-  let userActivity: UserActivity = {
-    selection: false,
-    input: false,
-  }
+  let hasInputChanged = false
   let clickContext: ClickContext | undefined
 
   const listeners = [
     addEventListener(
       window,
       DOM_EVENT.POINTER_DOWN,
-      (event: PointerEvent) => {
-        if (isValidMouseEvent(event)) {
-          selectionEmptyAtPointerDown = isSelectionEmpty()
-          userActivity = {
-            selection: false,
-            input: false,
-          }
+      (event) => {
+        hasSelectionChanged = false
+        selectionEmptyAtPointerDown = isSelectionEmpty()
+        if (isMouseEventOnElement(event)) {
           clickContext = onPointerDown(event)
         }
       },
@@ -47,7 +33,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onActionStart 
       DOM_EVENT.SELECTION_CHANGE,
       () => {
         if (!selectionEmptyAtPointerDown || !isSelectionEmpty()) {
-          userActivity.selection = true
+          hasSelectionChanged = true
         }
       },
       { capture: true }
@@ -55,29 +41,24 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onActionStart 
 
     addEventListener(
       window,
-      isExperimentalFeatureEnabled('click_action_on_pointerup') ? DOM_EVENT.POINTER_UP : DOM_EVENT.CLICK,
-      (startEvent: MouseEvent) => {
-        if (isValidMouseEvent(startEvent) && clickContext) {
+      DOM_EVENT.CLICK,
+      (clickEvent: MouseEvent) => {
+        if (isMouseEventOnElement(clickEvent) && clickContext) {
           // Use a scoped variable to make sure the value is not changed by other clicks
-          const localUserActivity = userActivity
-          let clickEventTimeStamp: TimeStamp | undefined
-          onActionStart(
-            clickContext,
-            startEvent,
-            () => localUserActivity,
-            () => clickEventTimeStamp
-          )
-          clickContext = undefined
-          if (isExperimentalFeatureEnabled('click_action_on_pointerup')) {
-            addEventListener(
-              window,
-              DOM_EVENT.CLICK,
-              () => {
-                clickEventTimeStamp = timeStampNow()
-              },
-              { capture: true, once: true }
+          const userActivity = {
+            selection: hasSelectionChanged,
+            input: hasInputChanged,
+          }
+          if (!hasInputChanged) {
+            setTimeout(
+              monitor(() => {
+                userActivity.input = hasInputChanged
+              })
             )
           }
+
+          onClick(clickContext, clickEvent, () => userActivity)
+          clickContext = undefined
         }
       },
       { capture: true }
@@ -87,7 +68,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onActionStart 
       window,
       DOM_EVENT.INPUT,
       () => {
-        userActivity.input = true
+        hasInputChanged = true
       },
       { capture: true }
     ),
@@ -105,14 +86,6 @@ function isSelectionEmpty(): boolean {
   return !selection || selection.isCollapsed
 }
 
-function isValidMouseEvent(event: MouseEvent): event is MouseEventOnElement {
-  return (
-    event.target instanceof Element &&
-    // Only consider 'primary' pointer events for now. Multi-touch support could be implemented in
-    // the future.
-    // On Chrome, click events are PointerEvent with `isPrimary = false`, but we should still
-    // consider them valid. This could be removed when we enable the `click-action-on-pointerup`
-    // flag, since we won't rely on click events anymore.
-    (event.type === 'click' || (event as PointerEvent).isPrimary !== false)
-  )
+function isMouseEventOnElement(event: Event): event is MouseEventOnElement {
+  return event.target instanceof Element
 }
