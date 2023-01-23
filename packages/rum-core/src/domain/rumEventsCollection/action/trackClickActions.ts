@@ -204,7 +204,7 @@ function processClick(
   })
 }
 
-type ClickActionBase = Pick<ClickAction, 'type' | 'name' | 'target' | 'position'>
+export type ClickActionBase = Pick<ClickAction, 'type' | 'name' | 'target' | 'position'>
 
 function computeClickActionBase(event: MouseEventOnElement, actionNameAttribute?: string): ClickActionBase {
   let target: ClickAction['target']
