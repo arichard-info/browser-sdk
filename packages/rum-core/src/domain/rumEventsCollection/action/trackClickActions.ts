@@ -283,6 +283,7 @@ function newClick(
     event: clickEvent,
     stop,
     stopObservable,
+    clickActionBase,
 
     get hasError() {
       return eventCountsSubscription.eventCounts.errorCount > 0
