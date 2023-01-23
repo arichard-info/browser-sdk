@@ -1,4 +1,4 @@
-import type { Context, Duration } from '@datadog/browser-core'
+import type { Context, Observable, Duration } from '@datadog/browser-core'
 import {
   addDuration,
   updateExperimentalFeatures,
@@ -7,6 +7,7 @@ import {
   timeStampNow,
   relativeNow,
 } from '@datadog/browser-core'
+import type { Clock } from '../../../../../core/test/specHelper'
 import { createNewEvent } from '../../../../../core/test/specHelper'
 import type { TestSetupBuilder } from '../../../../test/specHelper'
 import { setup } from '../../../../test/specHelper'
@@ -82,9 +83,9 @@ describe('trackClickActions', () => {
   })
 
   it('starts a click action when clicking on an element', () => {
-    const { clock } = setupBuilder.build()
+    const { domMutationObservable, clock } = setupBuilder.build()
     const pointerDownClocks = clocksNow()
-    emulateClick({ activity: {} })
+    emulateClickWithActivity(domMutationObservable, clock)
     expect(findActionId()).not.toBeUndefined()
     clock.tick(EXPIRE_DELAY)
     const domEvent = createNewEvent('click', { target: document.createElement('button') })
@@ -122,8 +123,8 @@ describe('trackClickActions', () => {
     })
 
     it('should set click position and target', () => {
-      const { clock } = setupBuilder.build()
-      emulateClick({ activity: {} })
+      const { domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock)
       clock.tick(EXPIRE_DELAY)
       expect(events[0]).toEqual(
         jasmine.objectContaining({
@@ -139,9 +140,9 @@ describe('trackClickActions', () => {
   })
 
   it('should keep track of previously validated click actions', () => {
-    const { clock } = setupBuilder.build()
+    const { domMutationObservable, clock } = setupBuilder.build()
     const pointerDownStart = relativeNow()
-    emulateClick({ activity: {} })
+    emulateClickWithActivity(domMutationObservable, clock)
     clock.tick(EXPIRE_DELAY)
 
     expect(findActionId(addDuration(pointerDownStart, EMULATED_CLICK_DURATION))).not.toBeUndefined()
@@ -150,7 +151,7 @@ describe('trackClickActions', () => {
   it('counts errors occurring during the click action', () => {
     const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
 
-    emulateClick({ activity: {} })
+    emulateClickWithActivity(domMutationObservable, clock)
 
     lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
     clock.tick(BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY)
@@ -170,9 +171,9 @@ describe('trackClickActions', () => {
   })
 
   it('does not count child events unrelated to the click action', () => {
-    const { lifeCycle, clock } = setupBuilder.build()
+    const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
 
-    emulateClick({ activity: {} })
+    emulateClickWithActivity(domMutationObservable, clock)
 
     lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, {
       type: RumEventType.RESOURCE,
@@ -187,10 +188,12 @@ describe('trackClickActions', () => {
   })
 
   it('should take the name from user-configured attribute', () => {
-    const { clock } = setupBuilder.withConfiguration({ actionNameAttribute: 'data-my-custom-attribute' }).build()
+    const { domMutationObservable, clock } = setupBuilder
+      .withConfiguration({ actionNameAttribute: 'data-my-custom-attribute' })
+      .build()
 
     button.setAttribute('data-my-custom-attribute', 'test-1')
-    emulateClick({ activity: {} })
+    emulateClickWithActivity(domMutationObservable, clock)
 
     clock.tick(EXPIRE_DELAY)
     expect(events.length).toBe(1)
@@ -199,8 +202,8 @@ describe('trackClickActions', () => {
 
   describe('without tracking frustrations', () => {
     it('discards any click action with a negative duration', () => {
-      const { clock } = setupBuilder.build()
-      emulateClick({ activity: { delay: -1 } })
+      const { domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock, button, -1)
       expect(findActionId()).not.toBeUndefined()
       clock.tick(EXPIRE_DELAY)
 
@@ -209,8 +212,8 @@ describe('trackClickActions', () => {
     })
 
     it('discards ongoing click action on view ended', () => {
-      const { lifeCycle, clock } = setupBuilder.build()
-      emulateClick({ activity: {} })
+      const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock)
       expect(findActionId()).not.toBeUndefined()
 
       lifeCycle.notify(LifeCycleEventType.VIEW_ENDED, {
@@ -223,11 +226,11 @@ describe('trackClickActions', () => {
     })
 
     it('ignores any starting click action while another one is ongoing', () => {
-      const { clock } = setupBuilder.build()
+      const { domMutationObservable, clock } = setupBuilder.build()
 
       const firstPointerDownTimeStamp = timeStampNow()
-      emulateClick({ activity: {} })
-      emulateClick({ activity: {} })
+      emulateClickWithActivity(domMutationObservable, clock)
+      emulateClickWithActivity(domMutationObservable, clock)
 
       clock.tick(EXPIRE_DELAY)
       expect(events.length).toBe(1)
@@ -236,7 +239,7 @@ describe('trackClickActions', () => {
 
     it('discards a click action when nothing happens after a click', () => {
       const { clock } = setupBuilder.build()
-      emulateClick()
+      emulateClickWithoutActivity(clock)
 
       clock.tick(EXPIRE_DELAY)
       expect(events).toEqual([])
@@ -244,8 +247,8 @@ describe('trackClickActions', () => {
     })
 
     it('ignores a click action if it fails to find a name', () => {
-      const { clock } = setupBuilder.build()
-      emulateClick({ activity: {}, target: emptyElement })
+      const { domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock, emptyElement)
       expect(findActionId()).toBeUndefined()
       clock.tick(EXPIRE_DELAY)
 
@@ -253,9 +256,9 @@ describe('trackClickActions', () => {
     })
 
     it('does not populate the frustrationTypes array', () => {
-      const { lifeCycle, clock } = setupBuilder.build()
+      const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
 
-      emulateClick({ activity: {} })
+      emulateClickWithActivity(domMutationObservable, clock)
       lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
 
       clock.tick(EXPIRE_DELAY)
@@ -270,8 +273,8 @@ describe('trackClickActions', () => {
     })
 
     it('discards any click action with a negative duration', () => {
-      const { clock } = setupBuilder.build()
-      emulateClick({ activity: { delay: -1 } })
+      const { domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock, button, -1)
       expect(findActionId()!.length).toEqual(2)
       clock.tick(EXPIRE_DELAY)
 
@@ -280,8 +283,8 @@ describe('trackClickActions', () => {
     })
 
     it('ongoing click action is stopped on view end', () => {
-      const { lifeCycle, clock } = setupBuilder.build()
-      emulateClick({ activity: { delay: BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY } })
+      const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock, button, BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY)
 
       clock.tick(BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY)
 
@@ -294,12 +297,12 @@ describe('trackClickActions', () => {
     })
 
     it('collect click actions even if another one is ongoing', () => {
-      const { clock } = setupBuilder.build()
+      const { domMutationObservable, clock } = setupBuilder.build()
 
       const firstPointerDownTimeStamp = timeStampNow()
-      emulateClick({ activity: {} })
+      emulateClickWithActivity(domMutationObservable, clock)
       const secondPointerDownTimeStamp = timeStampNow()
-      emulateClick({ activity: {} })
+      emulateClickWithActivity(domMutationObservable, clock)
 
       clock.tick(EXPIRE_DELAY)
       expect(events.length).toBe(2)
@@ -309,7 +312,7 @@ describe('trackClickActions', () => {
 
     it('collect click actions even if nothing happens after a click (dead click)', () => {
       const { clock } = setupBuilder.build()
-      emulateClick()
+      emulateClickWithoutActivity(clock)
 
       clock.tick(EXPIRE_DELAY)
       expect(events.length).toBe(1)
@@ -319,7 +322,7 @@ describe('trackClickActions', () => {
 
     it('does not set a duration for dead clicks', () => {
       const { clock } = setupBuilder.build()
-      emulateClick()
+      emulateClickWithoutActivity(clock)
 
       clock.tick(EXPIRE_DELAY)
       expect(events.length).toBe(1)
@@ -327,8 +330,8 @@ describe('trackClickActions', () => {
     })
 
     it('collect click actions even if it fails to find a name', () => {
-      const { clock } = setupBuilder.build()
-      emulateClick({ activity: {}, target: emptyElement })
+      const { domMutationObservable, clock } = setupBuilder.build()
+      emulateClickWithActivity(domMutationObservable, clock, emptyElement)
       expect(findActionId()!.length).toBeGreaterThan(0)
       clock.tick(EXPIRE_DELAY)
 
@@ -337,28 +340,28 @@ describe('trackClickActions', () => {
 
     describe('rage clicks', () => {
       it('considers a chain of three clicks or more as a single action with "rage" frustration type', () => {
-        const { clock } = setupBuilder.build()
+        const { domMutationObservable, clock } = setupBuilder.build()
         const firstPointerDownTimeStamp = timeStampNow()
-        const activityDelay = 5
-        emulateClick({ activity: { delay: activityDelay } })
-        emulateClick({ activity: { delay: activityDelay } })
-        emulateClick({ activity: { delay: activityDelay } })
+        const actionDuration = 5
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
 
         clock.tick(EXPIRE_DELAY)
         expect(events.length).toBe(1)
         expect(events[0].startClocks.timeStamp).toBe(addDuration(firstPointerDownTimeStamp, EMULATED_CLICK_DURATION))
         expect(events[0].frustrationTypes).toEqual([FrustrationType.RAGE_CLICK])
         expect(events[0].duration).toBe(
-          (MAX_DURATION_BETWEEN_CLICKS + 2 * activityDelay + 2 * EMULATED_CLICK_DURATION) as Duration
+          (MAX_DURATION_BETWEEN_CLICKS + 2 * actionDuration + 2 * EMULATED_CLICK_DURATION) as Duration
         )
       })
 
       it('should contain original events from of rage sequence', () => {
-        const { clock } = setupBuilder.build()
-        const activityDelay = 5
-        emulateClick({ activity: { delay: activityDelay } })
-        emulateClick({ activity: { delay: activityDelay } })
-        emulateClick({ activity: { delay: activityDelay } })
+        const { domMutationObservable, clock } = setupBuilder.build()
+        const actionDuration = 5
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
+        emulateClickWithActivity(domMutationObservable, clock, undefined, actionDuration)
 
         clock.tick(EXPIRE_DELAY)
         expect(events.length).toBe(1)
@@ -367,19 +370,19 @@ describe('trackClickActions', () => {
       })
 
       it('aggregates frustrationTypes from all clicks', () => {
-        const { lifeCycle, clock } = setupBuilder.build()
+        const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
 
         // Dead
-        emulateClick()
+        emulateClickWithoutActivity(clock)
         clock.tick(PAGE_ACTIVITY_VALIDATION_DELAY)
 
         // Error
-        emulateClick({ activity: {} })
+        emulateClickWithActivity(domMutationObservable, clock)
         lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
         clock.tick(PAGE_ACTIVITY_VALIDATION_DELAY)
 
         // Third click to make a rage click
-        emulateClick({ activity: {} })
+        emulateClickWithActivity(domMutationObservable, clock)
 
         clock.tick(EXPIRE_DELAY)
         expect(events.length).toBe(1)
@@ -395,9 +398,9 @@ describe('trackClickActions', () => {
 
     describe('error clicks', () => {
       it('considers a "click with activity" followed by an error as a click action with "error" frustration type', () => {
-        const { lifeCycle, clock } = setupBuilder.build()
+        const { lifeCycle, domMutationObservable, clock } = setupBuilder.build()
 
-        emulateClick({ activity: {} })
+        emulateClickWithActivity(domMutationObservable, clock)
         lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
 
         clock.tick(EXPIRE_DELAY)
@@ -408,7 +411,7 @@ describe('trackClickActions', () => {
       it('considers a "click without activity" followed by an error as a click action with "error" (and "dead") frustration type', () => {
         const { lifeCycle, clock } = setupBuilder.build()
 
-        emulateClick()
+        emulateClickWithoutActivity(clock)
         lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
 
         clock.tick(EXPIRE_DELAY)
@@ -423,7 +426,7 @@ describe('trackClickActions', () => {
       it('considers a "click without activity" as a dead click', () => {
         const { clock } = setupBuilder.build()
 
-        emulateClick()
+        emulateClickWithoutActivity(clock)
 
         clock.tick(EXPIRE_DELAY)
         expect(events.length).toBe(1)
@@ -432,15 +435,24 @@ describe('trackClickActions', () => {
     })
   })
 
-  function emulateClick({
-    target = button,
-    activity,
-  }: {
-    target?: HTMLElement
-    activity?: {
-      delay?: number
+  function emulateClickWithActivity(
+    domMutationObservable: Observable<void>,
+    clock: Clock,
+    target: HTMLElement = button,
+    clickActionDuration: number = BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY
+  ) {
+    emulateClickWithoutActivity(clock, target)
+    if (clickActionDuration < 0) {
+      // Do not use `.tick()` here because negative clock tick does not work since jasmine 4: https://github.com/jasmine/jasmine/pull/1948
+      clock.setDate(new Date(Date.now() + clickActionDuration))
+    } else {
+      clock.tick(clickActionDuration)
     }
-  } = {}) {
+    // Since we don't collect dom mutations for this test, manually dispatch one
+    domMutationObservable.notify()
+  }
+
+  function emulateClickWithoutActivity(clock: Clock, target: HTMLElement = button) {
     const targetPosition = target.getBoundingClientRect()
     const offsetX = targetPosition.width / 2
     const offsetY = targetPosition.height / 2
@@ -453,21 +465,9 @@ describe('trackClickActions', () => {
       timeStamp: timeStampNow(),
     }
     target.dispatchEvent(createNewEvent('pointerdown', eventProperties))
-    setupBuilder.clock!.tick(EMULATED_CLICK_DURATION)
+    clock.tick(EMULATED_CLICK_DURATION)
     target.dispatchEvent(createNewEvent('pointerup', eventProperties))
     target.dispatchEvent(createNewEvent('click', eventProperties))
-
-    if (activity) {
-      const delay = activity.delay ?? BEFORE_PAGE_ACTIVITY_VALIDATION_DELAY
-      if (delay < 0) {
-        // Do not use `.tick()` here because negative clock tick does not work since jasmine 4: https://github.com/jasmine/jasmine/pull/1948
-        setupBuilder.clock!.setDate(new Date(Date.now() + delay))
-      } else {
-        setupBuilder.clock!.tick(delay)
-      }
-      // Since we don't collect dom mutations for this test, manually dispatch one
-      setupBuilder.domMutationObservable.notify()
-    }
   }
 
   function createFakeErrorEvent() {
