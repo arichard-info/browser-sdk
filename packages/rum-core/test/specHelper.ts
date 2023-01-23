@@ -34,8 +34,7 @@ export interface TestSetupBuilder {
   withFakeClock: () => TestSetupBuilder
   beforeBuild: (callback: BeforeBuildCallback) => TestSetupBuilder
 
-  clock: Clock | undefined
-  domMutationObservable: Observable<void>
+  clock?: Clock
 
   cleanup: () => void
   build: () => TestIO
@@ -125,11 +124,6 @@ export function setup(): TestSetupBuilder {
   }
 
   const setupBuilder: TestSetupBuilder = {
-    domMutationObservable,
-    get clock() {
-      return clock
-    },
-
     withFakeLocation(initialUrl: string) {
       fakeLocation = buildLocation(initialUrl)
       return setupBuilder
@@ -160,9 +154,9 @@ export function setup(): TestSetupBuilder {
     },
     withFakeClock() {
       clock = mockClock()
+      setupBuilder.clock = clock
       return setupBuilder
     },
-
     beforeBuild(callback: BeforeBuildCallback) {
       beforeBuildTasks.push(callback)
       return setupBuilder
