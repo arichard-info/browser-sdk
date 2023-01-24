@@ -110,6 +110,8 @@ describe('customerDataTelemetry', () => {
       globalContextBytes: { min: 1, max: 10, sum: 101 },
       userContextBytes: { min: 1, max: 10, sum: 101 },
       featureFlagBytes: { min: 1, max: 10, sum: 101 },
+      testId: undefined,
+      resultId: undefined,
     })
   })
 
