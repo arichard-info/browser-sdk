@@ -132,8 +132,8 @@ export function addTelemetryDebug(message: string, context?: Context) {
         message,
         status: StatusType.debug,
 
-        test_id: getSyntheticsTestId(),
-        result_id: getSyntheticsResultId(),
+        testId: getSyntheticsTestId(),
+        resultId: getSyntheticsResultId(),
       },
       context
     )
