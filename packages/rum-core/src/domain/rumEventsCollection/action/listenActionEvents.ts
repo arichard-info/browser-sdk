@@ -2,7 +2,6 @@ import {
   addEventListener,
   addTelemetryDebug,
   DOM_EVENT,
-  getSyntheticsResultId,
   getSyntheticsTestId,
   includes,
   monitor,
