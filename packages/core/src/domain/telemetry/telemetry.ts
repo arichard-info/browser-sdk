@@ -10,6 +10,7 @@ import { Observable } from '../../tools/observable'
 import { timeStampNow } from '../../tools/timeUtils'
 import { displayIfDebugEnabled, startMonitorErrorCollection } from '../../tools/monitor'
 import { sendToExtension } from '../../tools/sendToExtension'
+import { getSyntheticsResultId, getSyntheticsTestId } from '../synthetics/syntheticsWorkerValues'
 import type { TelemetryEvent } from './telemetryEvent.types'
 import type { RawTelemetryConfiguration, RawTelemetryEvent } from './rawTelemetryEvent.types'
 import { StatusType, TelemetryType } from './rawTelemetryEvent.types'
@@ -130,6 +131,9 @@ export function addTelemetryDebug(message: string, context?: Context) {
         type: TelemetryType.log,
         message,
         status: StatusType.debug,
+
+        test_id: getSyntheticsTestId(),
+        result_id: getSyntheticsResultId(),
       },
       context
     )

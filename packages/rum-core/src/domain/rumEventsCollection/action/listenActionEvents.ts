@@ -105,22 +105,24 @@ function shouldLog() {
 
 function logEvent(event: Event) {
   if (shouldLog()) {
-    const target =
-      event.target instanceof Text
-        ? `#TEXT ${event.target.data}`
-        : event.target instanceof Element
-        ? `#ELEMENT ${(event.target.cloneNode(false) as Element).outerHTML}`
-        : Object.prototype.toString.call(event.target)
-    addTelemetryDebug('Event during Monitors synthetics test', {
-      event: {
-        type: event.type,
-        timestamp: event.timeStamp,
-        target,
-        isTrusted: event.isTrusted,
-      },
-      test_id: getSyntheticsTestId(),
-      result_id: getSyntheticsResultId(),
-    })
+    try {
+      const target =
+        event.target instanceof Text
+          ? `#TEXT ${event.target.data}`
+          : event.target instanceof Element
+          ? `#ELEMENT ${(event.target.cloneNode(false) as Element).outerHTML}`
+          : Object.prototype.toString.call(event.target)
+      addTelemetryDebug('Event during Monitors synthetics test', {
+        event: {
+          type: event.type,
+          timestamp: event.timeStamp,
+          target,
+          isTrusted: event.isTrusted,
+        },
+      })
+    } catch (e) {
+      addTelemetryDebug(`Event during Monitors synthetics test (error) ${String(e)}`, {})
+    }
   }
 }
 
