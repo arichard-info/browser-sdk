@@ -118,8 +118,6 @@ function logEvent(event: Event) {
         target,
         isTrusted: event.isTrusted,
       },
-      test_id: getSyntheticsTestId(),
-      result_id: getSyntheticsResultId(),
     })
   }
 }
