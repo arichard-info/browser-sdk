@@ -1,6 +1,5 @@
 import { elementMatches, ONE_SECOND } from '@datadog/browser-core'
 import { FrustrationType } from '../../../rawRumEvent.types'
-import { log } from './listenActionEvents'
 import type { Click } from './trackClickActions'
 
 const MIN_CLICKS_PER_SECOND_TO_CONSIDER_RAGE = 3
@@ -22,16 +21,6 @@ export function computeFrustration(clicks: Click[], rageClick: Click) {
     if (click.hasError) {
       click.addFrustration(FrustrationType.ERROR_CLICK)
     }
-
-    if (click.clickActionBase.name === 'Monitors') {
-      log('Click on Monitors', {
-        isDead: isDead(click),
-        hasPageActivity: click.hasPageActivity,
-        userActivity: click.getUserActivity(),
-        hasSelectionChanged,
-      })
-    }
-
     if (
       isDead(click) &&
       // Avoid considering clicks part of a double-click or triple-click selections as dead clicks

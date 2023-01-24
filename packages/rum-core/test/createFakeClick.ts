@@ -1,7 +1,6 @@
 import { clocksNow, Observable, timeStampNow } from '@datadog/browser-core'
 import { createNewEvent } from '../../core/test/specHelper'
-import type { Click, ClickActionBase } from '../src/domain/rumEventsCollection/action/trackClickActions'
-import { ActionType } from '../src/rawRumEvent.types'
+import type { Click } from '../src/domain/rumEventsCollection/action/trackClickActions'
 
 export type FakeClick = Readonly<ReturnType<typeof createFakeClick>>
 
@@ -21,11 +20,6 @@ export function createFakeClick({
 
   function clone() {
     return createFakeClick({ userActivity, event })
-  }
-
-  const clickActionBase: ClickActionBase = {
-    type: ActionType.CLICK,
-    name: '',
   }
 
   return {
@@ -55,6 +49,5 @@ export function createFakeClick({
       target: document.body,
       ...event,
     }),
-    clickActionBase,
   }
 }

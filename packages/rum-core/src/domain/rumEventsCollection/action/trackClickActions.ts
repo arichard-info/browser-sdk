@@ -204,7 +204,7 @@ function processClick(
   })
 }
 
-export type ClickActionBase = Pick<ClickAction, 'type' | 'name' | 'target' | 'position'>
+type ClickActionBase = Pick<ClickAction, 'type' | 'name' | 'target' | 'position'>
 
 function computeClickActionBase(event: MouseEventOnElement, actionNameAttribute?: string): ClickActionBase {
   let target: ClickAction['target']
@@ -283,7 +283,6 @@ function newClick(
     event: clickEvent,
     stop,
     stopObservable,
-    clickActionBase,
 
     get hasError() {
       return eventCountsSubscription.eventCounts.errorCount > 0
