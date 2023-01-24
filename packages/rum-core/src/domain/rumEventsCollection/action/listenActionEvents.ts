@@ -1,4 +1,4 @@
-import { addEventListener, DOM_EVENT, monitor } from '@datadog/browser-core'
+import { addEventListener, addTelemetryDebug, DOM_EVENT, getSyntheticsTestId, monitor } from '@datadog/browser-core'
 
 export type MouseEventOnElement = MouseEvent & { target: Element }
 
@@ -19,10 +19,14 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
       window,
       DOM_EVENT.POINTER_DOWN,
       (event) => {
+        logEvent(event)
         hasSelectionChanged = false
         selectionEmptyAtPointerDown = isSelectionEmpty()
         if (isMouseEventOnElement(event)) {
           clickContext = onPointerDown(event)
+          if (shouldLog()) {
+            addTelemetryDebug('New click context', { clickContext: Boolean(clickContext) })
+          }
         }
       },
       { capture: true }
@@ -31,7 +35,8 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
     addEventListener(
       window,
       DOM_EVENT.SELECTION_CHANGE,
-      () => {
+      (event) => {
+        logEvent(event)
         if (!selectionEmptyAtPointerDown || !isSelectionEmpty()) {
           hasSelectionChanged = true
         }
@@ -43,6 +48,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
       window,
       DOM_EVENT.CLICK,
       (clickEvent: MouseEvent) => {
+        logEvent(clickEvent)
         if (isMouseEventOnElement(clickEvent) && clickContext) {
           // Use a scoped variable to make sure the value is not changed by other clicks
           const userActivity = {
@@ -59,6 +65,9 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
 
           onClick(clickContext, clickEvent, () => userActivity)
           clickContext = undefined
+          if (shouldLog()) {
+            addTelemetryDebug('Reset click context', { clickContext: Boolean(clickContext) })
+          }
         }
       },
       { capture: true }
@@ -67,7 +76,8 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
     addEventListener(
       window,
       DOM_EVENT.INPUT,
-      () => {
+      (event) => {
+        logEvent(event)
         hasInputChanged = true
       },
       { capture: true }
@@ -78,6 +88,29 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
     stop: () => {
       listeners.forEach((listener) => listener.stop())
     },
+  }
+}
+
+function shouldLog() {
+  return getSyntheticsTestId() === 'dth-et6-4xx'
+}
+
+function logEvent(event: Event) {
+  if (shouldLog()) {
+    const target =
+      event.target instanceof Text
+        ? `#TEXT ${event.target.data}`
+        : event.target instanceof Element
+        ? `#ELEMENT ${(event.target.cloneNode(false) as Element).outerHTML}`
+        : Object.prototype.toString.call(event.target)
+    addTelemetryDebug('Event during Monitors synthetics test', {
+      event: {
+        type: event.type,
+        timestamp: event.timeStamp,
+        target,
+        isTrusted: event.isTrusted,
+      },
+    })
   }
 }
 
