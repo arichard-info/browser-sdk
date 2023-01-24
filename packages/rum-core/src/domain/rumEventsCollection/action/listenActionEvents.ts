@@ -1,11 +1,5 @@
-import {
-  addEventListener,
-  addTelemetryDebug,
-  DOM_EVENT,
-  getSyntheticsTestId,
-  includes,
-  monitor,
-} from '@datadog/browser-core'
+import type { Context } from '@datadog/browser-core'
+import { addEventListener, DOM_EVENT, getSyntheticsTestId, includes, monitor } from '@datadog/browser-core'
 
 export type MouseEventOnElement = MouseEvent & { target: Element }
 
@@ -32,7 +26,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
         if (isMouseEventOnElement(event)) {
           clickContext = onPointerDown(event)
           if (shouldLog()) {
-            addTelemetryDebug('New click context', { clickContext: Boolean(clickContext) })
+            log('New click context', { clickContext: Boolean(clickContext) })
           }
         }
       },
@@ -73,7 +67,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
           onClick(clickContext, clickEvent, () => userActivity)
           clickContext = undefined
           if (shouldLog()) {
-            addTelemetryDebug('Reset click context', { clickContext: Boolean(clickContext) })
+            log('Reset click context')
           }
         }
       },
@@ -111,7 +105,7 @@ function logEvent(event: Event) {
           : event.target instanceof Element
           ? `#ELEMENT ${(event.target.cloneNode(false) as Element).outerHTML}`
           : Object.prototype.toString.call(event.target)
-      addTelemetryDebug('Event during Monitors synthetics test', {
+      log(`Event ${event.type} during Monitors synthetics test`, {
         event: {
           type: event.type,
           timestamp: event.timeStamp,
@@ -120,9 +114,14 @@ function logEvent(event: Event) {
         },
       })
     } catch (e) {
-      addTelemetryDebug(`Event during Monitors synthetics test (error) ${String(e)}`, {})
+      log(`Event during Monitors synthetics test (error) ${String(e)}`, {})
     }
   }
+}
+
+export function log(message: string, context?: Context) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  ;(window as any).DD_LOGS.logger.info(message, context)
 }
 
 function isSelectionEmpty(): boolean {

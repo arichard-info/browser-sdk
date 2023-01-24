@@ -1,5 +1,6 @@
-import { addTelemetryDebug, elementMatches, ONE_SECOND } from '@datadog/browser-core'
+import { elementMatches, ONE_SECOND } from '@datadog/browser-core'
 import { FrustrationType } from '../../../rawRumEvent.types'
+import { log } from './listenActionEvents'
 import type { Click } from './trackClickActions'
 
 const MIN_CLICKS_PER_SECOND_TO_CONSIDER_RAGE = 3
@@ -23,7 +24,7 @@ export function computeFrustration(clicks: Click[], rageClick: Click) {
     }
 
     if (click.clickActionBase.name === 'Monitors') {
-      addTelemetryDebug('Click on Monitors', {
+      log('Click on Monitors', {
         isDead: isDead(click),
         hasPageActivity: click.hasPageActivity,
         userActivity: click.getUserActivity(),
