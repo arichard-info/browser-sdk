@@ -1,4 +1,12 @@
-import { addEventListener, addTelemetryDebug, DOM_EVENT, getSyntheticsTestId, monitor } from '@datadog/browser-core'
+import {
+  addEventListener,
+  addTelemetryDebug,
+  DOM_EVENT,
+  getSyntheticsResultId,
+  getSyntheticsTestId,
+  includes,
+  monitor,
+} from '@datadog/browser-core'
 
 export type MouseEventOnElement = MouseEvent & { target: Element }
 
@@ -92,7 +100,7 @@ export function listenActionEvents<ClickContext>({ onPointerDown, onClick }: Act
 }
 
 function shouldLog() {
-  return getSyntheticsTestId() === 'dth-et6-4xx'
+  return includes(['dth-et6-4xx', 'zch-9ia-ymv'], getSyntheticsTestId())
 }
 
 function logEvent(event: Event) {
@@ -110,6 +118,8 @@ function logEvent(event: Event) {
         target,
         isTrusted: event.isTrusted,
       },
+      test_id: getSyntheticsTestId(),
+      result_id: getSyntheticsResultId(),
     })
   }
 }
