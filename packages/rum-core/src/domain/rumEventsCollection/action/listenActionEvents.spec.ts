@@ -85,11 +85,11 @@ describe('listenActionEvents', () => {
     expect(actionEventsHooks.onActionStart).not.toHaveBeenCalled()
   })
 
-  describe('click_action_on_pointerup experimental feature', () => {
+  describe('dead_click_fixes experimental feature', () => {
     beforeEach(() => {
       stopListenEvents()
 
-      updateExperimentalFeatures(['click_action_on_pointerup'])
+      updateExperimentalFeatures(['dead_click_fixes'])
       ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
     })
 
@@ -229,11 +229,11 @@ describe('listenActionEvents', () => {
       expect(hasInputUserActivity()).toBe(true)
     })
 
-    describe('with fix_dead_clicks_after_input flag', () => {
+    describe('with dead_click_fixes flag', () => {
       beforeEach(() => {
         stopListenEvents()
 
-        updateExperimentalFeatures(['fix_dead_clicks_after_input'])
+        updateExperimentalFeatures(['dead_click_fixes'])
         ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
       })
 
@@ -247,6 +247,13 @@ describe('listenActionEvents', () => {
         clock.tick(1) // run immediate timeouts
         expect(hasInputUserActivity()).toBe(false)
       })
+    })
+
+    it('without dead_click_fixes, input events that precede clicks should still be taken into account', () => {
+      emulateInputEvent()
+      emulateClick()
+      clock.tick(1) // run immediate timeouts
+      expect(hasInputUserActivity()).toBe(true)
     })
 
     it('click and type should report an input user activity', () => {
