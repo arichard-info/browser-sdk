@@ -158,7 +158,7 @@ function processPointerDown(
 
   let hadActivityOnPointerDown = false
 
-  if (isExperimentalFeatureEnabled('click_action_on_pointerup')) {
+  if (isExperimentalFeatureEnabled('dead_click_fixes')) {
     waitPageActivityEnd(
       lifeCycle,
       domMutationObservable,
