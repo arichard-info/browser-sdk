@@ -75,6 +75,15 @@ describe('sanitize', () => {
       })
     })
 
+    it('should serialize errors', () => {
+      const error = new SyntaxError('Wrong syntax')
+      expect(sanitize(error)).toEqual({
+        message: 'Wrong syntax',
+        type: 'SyntaxError',
+        stack: jasmine.any(String),
+      })
+    })
+
     it('should serialize objects like maps as a string', () => {
       const map = new Map([
         ['a', 13],

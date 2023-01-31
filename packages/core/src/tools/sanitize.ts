@@ -1,3 +1,5 @@
+import { computeStackTrace } from '../domain/tracekit'
+import { toStackTraceString } from './error'
 import { detachToJsonMethod } from './utils'
 
 type DataWithToJson = unknown & { toJSON?: () => unknown }
@@ -165,6 +167,16 @@ function sanitizeObjects(value: object) {
       return {
         type: value.type,
         isTrusted: value.isTrusted,
+      }
+    }
+
+    // Handle errors using our implementation to extract the stack trace
+    if (value instanceof Error) {
+      const stackTrace = computeStackTrace(value)
+      return {
+        message: stackTrace.message,
+        type: stackTrace.name,
+        stack: toStackTraceString(stackTrace),
       }
     }
 
