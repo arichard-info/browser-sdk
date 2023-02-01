@@ -1,14 +1,7 @@
 import type { StackTrace } from '../domain/tracekit'
 import type { RawErrorCause, ErrorWithCause } from './error'
 import { clocksNow } from './timeUtils'
-import {
-  createHandlingStack,
-  computeRawError,
-  getFileFromStackTraceString,
-  flattenErrorCauses,
-  ErrorSource,
-  ErrorHandling,
-} from './error'
+import { createHandlingStack, computeRawError, flattenErrorCauses, ErrorSource, ErrorHandling } from './error'
 
 describe('computeRawError', () => {
   const NOT_COMPUTED_STACK_TRACE: StackTrace = { name: undefined, message: undefined, stack: [] } as any
@@ -170,21 +163,6 @@ describe('computeRawError', () => {
     expect(causes[1].source).toContain(ErrorSource.SOURCE)
     expect(causes[1].type).toEqual(deepNestedError.name)
     expect(causes[1].stack).toContain('Error: fiz: buz')
-  })
-})
-
-describe('getFileFromStackTraceString', () => {
-  it('should get the first source file of the stack', () => {
-    expect(
-      getFileFromStackTraceString(`TypeError: oh snap!
-  at foo(1, bar) @ http://path/to/file.js:52:15
-  at <anonymous> @ http://path/to/file.js:12
-  at <anonymous>(baz) @ http://path/to/file.js`)
-    ).toEqual('http://path/to/file.js:52:15')
-  })
-
-  it('should get undefined if no source file is in the stack', () => {
-    expect(getFileFromStackTraceString('TypeError: oh snap!')).not.toBeDefined()
   })
 })
 

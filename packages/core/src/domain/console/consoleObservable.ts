@@ -1,5 +1,5 @@
-import { computeStackTrace } from '../tracekit'
-import { createHandlingStack, formatErrorMessage, toStackTraceString } from '../../tools/error'
+import { computeStackTrace, formatErrorMessage, toStackTraceString } from '../tracekit'
+import { createHandlingStack } from '../../tools/error'
 import { mergeObservables, Observable } from '../../tools/observable'
 import { find, jsonStringify } from '../../tools/utils'
 import { ConsoleApiName } from '../../tools/display'

@@ -1,5 +1,4 @@
-import { computeStackTrace } from '../domain/tracekit'
-import { toStackTraceString } from './error'
+import { computeStackTrace, toStackTraceString } from '../domain/tracekit'
 import { detachToJsonMethod } from './utils'
 
 type DataWithToJson = unknown & { toJSON?: () => unknown }
