@@ -1,6 +1,4 @@
-import { resetExperimentalFeatures, updateExperimentalFeatures } from '@datadog/browser-core'
-import type { Clock } from '../../../../../core/test/specHelper'
-import { createNewEvent, mockClock } from '../../../../../core/test/specHelper'
+import { createNewEvent } from '../../../../../core/test/specHelper'
 import type { ActionEventsHooks } from './listenActionEvents'
 import { listenActionEvents } from './listenActionEvents'
 
@@ -37,23 +35,11 @@ describe('listenActionEvents', () => {
     expect(actionEventsHooks.onPointerDown).toHaveBeenCalledTimes(1)
   })
 
-  it('listen to click events', () => {
+  it('listen to pointerup events', () => {
     emulateClick()
     expect(actionEventsHooks.onStartEvent).toHaveBeenCalledOnceWith(
       {},
-      jasmine.objectContaining({ type: 'click' }),
-      jasmine.any(Function),
-      jasmine.any(Function)
-    )
-  })
-
-  it('listen to non-primary click events', () => {
-    // This emulates a Chrome behavior where all click events are non-primary
-    emulateClick({ clickEventIsPrimary: false })
-    expect(actionEventsHooks.onStartEvent).toHaveBeenCalledOnceWith(
-      {},
-      jasmine.objectContaining({ type: 'click' }),
-      jasmine.any(Function),
+      jasmine.objectContaining({ type: 'pointerup' }),
       jasmine.any(Function)
     )
   })
@@ -83,29 +69,6 @@ describe('listenActionEvents', () => {
     window.dispatchEvent(createNewEvent('click', { target: document.body }))
 
     expect(actionEventsHooks.onStartEvent).not.toHaveBeenCalled()
-  })
-
-  describe('dead_click_fixes experimental feature', () => {
-    beforeEach(() => {
-      stopListenEvents()
-
-      updateExperimentalFeatures(['dead_click_fixes'])
-      ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
-    })
-
-    afterEach(() => {
-      resetExperimentalFeatures()
-    })
-
-    it('listen to pointerup events', () => {
-      emulateClick()
-      expect(actionEventsHooks.onStartEvent).toHaveBeenCalledOnceWith(
-        {},
-        jasmine.objectContaining({ type: 'pointerup' }),
-        jasmine.any(Function),
-        jasmine.any(Function)
-      )
-    })
   })
 
   describe('selection change', () => {
@@ -198,16 +161,6 @@ describe('listenActionEvents', () => {
   })
 
   describe('input user activity', () => {
-    let clock: Clock
-
-    beforeEach(() => {
-      clock = mockClock()
-    })
-
-    afterEach(() => {
-      clock.cleanup()
-    })
-
     it('click that do not trigger an input input event should not report input user activity', () => {
       emulateClick()
       expect(hasInputUserActivity()).toBe(false)
@@ -225,35 +178,13 @@ describe('listenActionEvents', () => {
     it('click that triggers an input event slightly after the click should report an input user activity', () => {
       emulateClick()
       emulateInputEvent()
-      clock.tick(1) // run immediate timeouts
       expect(hasInputUserActivity()).toBe(true)
     })
 
-    describe('with dead_click_fixes flag', () => {
-      beforeEach(() => {
-        stopListenEvents()
-
-        updateExperimentalFeatures(['dead_click_fixes'])
-        ;({ stop: stopListenEvents } = listenActionEvents(actionEventsHooks))
-      })
-
-      afterEach(() => {
-        resetExperimentalFeatures()
-      })
-
-      it('input events that precede clicks should not be taken into account', () => {
-        emulateInputEvent()
-        emulateClick()
-        clock.tick(1) // run immediate timeouts
-        expect(hasInputUserActivity()).toBe(false)
-      })
-    })
-
-    it('without dead_click_fixes, input events that precede clicks should still be taken into account', () => {
+    it('input events that precede clicks should not be taken into account', () => {
       emulateInputEvent()
       emulateClick()
-      clock.tick(1) // run immediate timeouts
-      expect(hasInputUserActivity()).toBe(true)
+      expect(hasInputUserActivity()).toBe(false)
     })
 
     it('click and type should report an input user activity', () => {
