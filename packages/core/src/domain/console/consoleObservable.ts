@@ -6,9 +6,17 @@ import { ConsoleApiName } from '../../tools/display'
 import { callMonitored } from '../../tools/monitor'
 
 export interface ConsoleLog {
+  /* Error message created from the concatenation of console parameters */
   message: string
+  /* The console API generating this log (debug, info, warn, error, ...) */
   api: ConsoleApiName
+  /* The specific type of the first Error object present in console parameters (SyntaxError, RangeError, ...) */
+  kind?: string
+  /* The stack trace provided by the first Error object present in console parameters */
   stack?: string
+  /* The message included in the first Error object present in console parameters */
+  errorMessage?: string
+  /* The stack trace at the time the console method is called */
   handlingStack?: string
 }
 
@@ -51,16 +59,25 @@ function buildConsoleLog(params: unknown[], api: ConsoleApiName, handlingStack: 
   // Todo: remove console error prefix in the next major version
   let message = params.map((param) => formatConsoleParameters(param)).join(' ')
   let stack
+  let kind
+  let errorMessage
 
   if (api === ConsoleApiName.error) {
     const firstErrorParam = find(params, (param: unknown): param is Error => param instanceof Error)
-    stack = firstErrorParam ? toStackTraceString(computeStackTrace(firstErrorParam)) : undefined
+    if (firstErrorParam) {
+      const stackTrace = computeStackTrace(firstErrorParam)
+      stack = toStackTraceString(stackTrace)
+      kind = stackTrace.name
+      errorMessage = stackTrace.message
+    }
     message = `console error: ${message}`
   }
 
   return {
     api,
+    kind,
     message,
+    errorMessage,
     stack,
     handlingStack,
   }
