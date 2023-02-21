@@ -3,7 +3,7 @@ import type { RawConsoleLogsEvent } from '../../../rawLogsEvent.types'
 import { validateAndBuildLogsConfiguration } from '../../configuration'
 import type { RawLogsEventCollectedData } from '../../lifeCycle'
 import { LifeCycle, LifeCycleEventType } from '../../lifeCycle'
-import { StatusType } from '../../logger'
+import { NO_ERROR_STACK_PRESENT_MESSAGE, StatusType } from '../../logger'
 import { startConsoleCollection } from './consoleCollection'
 
 describe('console collection', () => {
@@ -55,11 +55,30 @@ describe('console collection', () => {
     ))
 
     /* eslint-disable-next-line no-console */
-    console.error('foo', 'bar')
+    console.error('foo')
 
     expect(rawLogsEvents[0].rawLogsEvent.error).toEqual({
       origin: ErrorSource.CONSOLE,
-      stack: undefined,
+      kind: undefined,
+      message: 'Provided: console error: foo',
+      stack: NO_ERROR_STACK_PRESENT_MESSAGE,
+    })
+  })
+
+  it('console error should populate error object with details from the first error instance provided', () => {
+    ;({ stop: stopConsoleCollection } = startConsoleCollection(
+      validateAndBuildLogsConfiguration({ ...initConfiguration, forwardErrorsToLogs: true })!,
+      lifeCycle
+    ))
+
+    /* eslint-disable-next-line no-console */
+    console.error('foo', SyntaxError('syntax'))
+
+    expect(rawLogsEvents[0].rawLogsEvent.error).toEqual({
+      origin: ErrorSource.CONSOLE,
+      kind: 'SyntaxError',
+      message: 'syntax',
+      stack: jasmine.stringMatching(/^SyntaxError: syntax/),
     })
   })
 })

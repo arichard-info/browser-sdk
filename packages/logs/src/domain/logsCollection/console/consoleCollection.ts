@@ -4,7 +4,7 @@ import type { RawConsoleLogsEvent } from '../../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../../configuration'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'
-import { StatusType } from '../../logger'
+import { NO_ERROR_STACK_PRESENT_MESSAGE, PROVIDED_ERROR_MESSAGE_PREFIX, StatusType } from '../../logger'
 
 export interface ProvidedError {
   startClocks: ClocksState
@@ -31,7 +31,9 @@ export function startConsoleCollection(configuration: LogsConfiguration, lifeCyc
           log.api === ConsoleApiName.error
             ? {
                 origin: ErrorSource.CONSOLE, // Todo: Remove in the next major release
-                stack: log.stack,
+                kind: log.kind,
+                stack: log.stack || NO_ERROR_STACK_PRESENT_MESSAGE,
+                message: log.errorMessage || `${PROVIDED_ERROR_MESSAGE_PREFIX} ${log.message}`,
               }
             : undefined,
         status: LogStatusForApi[log.api],
