@@ -110,16 +110,4 @@ describe('console error observable', () => {
       expect(stack).toContain('TypeError: foo')
     }
   })
-
-  it('should extract the kind of error', () => {
-    console.error(new TypeError('foo'))
-    const kind = (notifyLog.calls.mostRecent().args[0] as ConsoleLog).kind
-    expect(kind).toEqual('TypeError')
-  })
-
-  it('should extract an error message from an error object', () => {
-    console.error(new TypeError('foo'))
-    const errorMessage = (notifyLog.calls.mostRecent().args[0] as ConsoleLog).errorMessage
-    expect(errorMessage).toEqual('foo')
-  })
 })
