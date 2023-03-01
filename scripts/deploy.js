@@ -24,30 +24,23 @@ const AWS_CONFIG = {
 const env = process.argv[2]
 const version = process.argv[3]
 
-const browserCache = version === 'staging' || version === 'canary' ? 15 * ONE_MINUTE_IN_SECOND : 4 * ONE_HOUR_IN_SECOND
-const cacheControl = `max-age=${browserCache}, s-maxage=60`
-
 const bundles = {
   'packages/rum/bundle/datadog-rum.js': `datadog-rum-${version}.js`,
   'packages/rum-slim/bundle/datadog-rum-slim.js': `datadog-rum-slim-${version}.js`,
   'packages/logs/bundle/datadog-logs.js': `datadog-logs-${version}.js`,
 }
 
-function generateEnvironmentForRole(awsAccountId, roleName) {
-  const rawCredentials = command`
-  aws sts assume-role 
-    --role-arn arn:aws:iam::${awsAccountId}:role/${roleName} 
-    --role-session-name AWSCLI-Session`.run()
-  const credentials = JSON.parse(rawCredentials)['Credentials']
-  return {
-    AWS_ACCESS_KEY_ID: credentials['AccessKeyId'],
-    AWS_SECRET_ACCESS_KEY: credentials['SecretAccessKey'],
-    AWS_SESSION_TOKEN: credentials['SessionToken'],
-  }
-}
+runMain(() => {
+  uploadToS3(AWS_CONFIG[env])
+  invalidateCloudfront(AWS_CONFIG[env])
+})
 
 function uploadToS3(awsConfig) {
   const accessToS3 = generateEnvironmentForRole(awsConfig.accountId, 'build-stable-browser-agent-artifacts-s3-write')
+  const browserCache =
+    version === 'staging' || version === 'canary' ? 15 * ONE_MINUTE_IN_SECOND : 4 * ONE_HOUR_IN_SECOND
+  const cacheControl = `max-age=${browserCache}, s-maxage=60`
+
   for (const [filePath, bundleName] of Object.entries(bundles)) {
     printLog(`Upload ${filePath} to s3://${awsConfig.bucketName}/${bundleName}`)
     command`
@@ -68,7 +61,15 @@ function invalidateCloudfront(awsConfig) {
     .run()
 }
 
-runMain(() => {
-  uploadToS3(AWS_CONFIG[env])
-  invalidateCloudfront(AWS_CONFIG[env])
-})
+function generateEnvironmentForRole(awsAccountId, roleName) {
+  const rawCredentials = command`
+  aws sts assume-role 
+    --role-arn arn:aws:iam::${awsAccountId}:role/${roleName} 
+    --role-session-name AWSCLI-Session`.run()
+  const credentials = JSON.parse(rawCredentials)['Credentials']
+  return {
+    AWS_ACCESS_KEY_ID: credentials['AccessKeyId'],
+    AWS_SECRET_ACCESS_KEY: credentials['SecretAccessKey'],
+    AWS_SESSION_TOKEN: credentials['SessionToken'],
+  }
+}
