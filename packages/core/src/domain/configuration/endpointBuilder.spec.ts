@@ -1,8 +1,7 @@
 import type { BuildEnvWindow } from '../../../test'
-import { startsWith } from '../../tools/utils'
+import { startsWith, ExperimentalFeature, resetExperimentalFeatures, addExperimentalFeatures } from '../../tools'
 import type { InitConfiguration } from './configuration'
 import { createEndpointBuilder } from './endpointBuilder'
-import { ExperimentalFeature, resetExperimentalFeatures, addExperimentalFeatures } from './experimentalFeatures'
 
 describe('endpointBuilder', () => {
   const clientToken = 'some_client_token'

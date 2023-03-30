@@ -1,10 +1,14 @@
-import { ExperimentalFeature, isExperimentalFeatureEnabled } from '../domain/configuration'
-import type { StackTrace } from '../domain/tracekit'
-import { computeStackTrace } from '../domain/tracekit'
-import { callMonitored } from './monitor'
-import { sanitize } from './sanitize'
-import type { ClocksState } from './timeUtils'
-import { jsonStringify, noop } from './utils'
+import type { StackTrace } from '../tracekit'
+import { computeStackTrace } from '../tracekit'
+import {
+  ExperimentalFeature,
+  isExperimentalFeatureEnabled,
+  callMonitored,
+  sanitize,
+  jsonStringify,
+  noop,
+} from '../../tools'
+import type { ClocksState } from '../../tools'
 
 export const NO_ERROR_STACK_PRESENT_MESSAGE = 'No stack, consider using an instance of Error'
 export const PROVIDED_ERROR_MESSAGE_PREFIX = 'Provided'
