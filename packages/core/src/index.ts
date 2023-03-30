@@ -5,10 +5,6 @@ export {
   validateAndBuildConfiguration,
   DefaultPrivacyLevel,
   EndpointBuilder,
-  isExperimentalFeatureEnabled,
-  ExperimentalFeature,
-  addExperimentalFeatures,
-  resetExperimentalFeatures,
   serializeConfiguration,
 } from './domain/configuration'
 export { trackRuntimeError } from './domain/error/trackRuntimeError'
@@ -32,8 +28,6 @@ export {
   isTelemetryReplicationAllowed,
   addTelemetryConfiguration,
 } from './domain/telemetry'
-export { monitored, monitor, callMonitored, setDebugMode } from './tools/monitor'
-export { Observable, Subscription } from './tools/observable'
 export {
   startSessionManager,
   SessionManager,
@@ -53,18 +47,9 @@ export {
   getEventBridge,
   startBatchWithReplica,
 } from './transport'
-export * from './tools/display'
-export * from './tools/urlPolyfill'
-export * from './tools/timeUtils'
-export * from './tools/utils'
-export * from './tools/sanitize'
-export * from './tools/getGlobalObject'
-export * from './tools/createEventRateLimiter'
-export * from './tools/browserDetection'
-export { sendToExtension } from './tools/sendToExtension'
-export { runOnReadyState } from './tools/runOnReadyState'
-export { getZoneJsOriginalValue } from './tools/getZoneJsOriginalValue'
-export { instrumentMethod, instrumentMethodAndCallOriginal, instrumentSetter } from './tools/instrumentMethod'
+export * from './domain/eventRateLimiter/createEventRateLimiter'
+export { runOnReadyState } from './browser/runOnReadyState'
+export * from './tools'
 export {
   ErrorSource,
   ErrorHandling,
@@ -77,22 +62,13 @@ export {
   getFileFromStackTraceString,
   NO_ERROR_STACK_PRESENT_MESSAGE,
   PROVIDED_ERROR_MESSAGE_PREFIX,
-} from './tools/error'
-export { Context, ContextArray, ContextValue } from './tools/context'
+} from './domain/error/error'
 export { areCookiesAuthorized, getCookie, setCookie, deleteCookie, COOKIE_ACCESS_DELAY } from './browser/cookie'
 export { initXhrObservable, XhrCompleteContext, XhrStartContext } from './browser/xhrObservable'
 export { initFetchObservable, FetchResolveContext, FetchStartContext, FetchContext } from './browser/fetchObservable'
 export { createPageExitObservable, PageExitEvent, PageExitReason, isPageExitReason } from './browser/pageExitObservable'
 export * from './browser/addEventListener'
-export * from './browser/timer'
 export { initConsoleObservable, ConsoleLog } from './domain/console/consoleObservable'
-export { BoundedBuffer } from './tools/boundedBuffer'
-export { catchUserErrors } from './tools/catchUserErrors'
-export { createContextManager, ContextManager } from './tools/contextManager'
-export { warnIfCustomerDataLimitReached, CustomerDataType } from './tools/heavyCustomerDataWarning'
-export { limitModification } from './tools/limitModification'
-export { ContextHistory, ContextHistoryEntry, CLEAR_OLD_CONTEXTS_INTERVAL } from './tools/contextHistory'
-export { readBytesFromStream } from './tools/readBytesFromStream'
 export { SESSION_COOKIE_NAME } from './domain/session/sessionCookieStore'
 export {
   willSyntheticsInjectRum,
