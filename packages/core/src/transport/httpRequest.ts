@@ -1,8 +1,8 @@
 import type { EndpointBuilder } from '../domain/configuration'
 import { addTelemetryError } from '../domain/telemetry'
-import type { Context } from '../tools'
-import { monitor } from '../tools'
-import type { RawError } from '../domain/error/error'
+import type { Context } from '../tools/context'
+import { monitor } from '../tools/monitor'
+import type { RawError } from '../tools/error'
 import { newRetryState, sendWithRetryStrategy } from './sendWithRetryStrategy'
 import type { FlushReason } from './batch'
 

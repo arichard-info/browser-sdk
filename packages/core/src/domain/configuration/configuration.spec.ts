@@ -1,7 +1,8 @@
 import type { RumEvent } from '../../../../rum-core/src'
-import { display, ExperimentalFeature, isExperimentalFeatureEnabled, resetExperimentalFeatures } from '../../tools'
+import { display } from '../../tools/display'
 import type { InitConfiguration } from './configuration'
 import { validateAndBuildConfiguration } from './configuration'
+import { ExperimentalFeature, isExperimentalFeatureEnabled, resetExperimentalFeatures } from './experimentalFeatures'
 
 describe('validateAndBuildConfiguration', () => {
   const clientToken = 'some_client_token'

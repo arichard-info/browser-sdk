@@ -1,4 +1,4 @@
-import { ExperimentalFeature, isExperimentalFeatureEnabled } from './experimentalFeatures'
+import { ExperimentalFeature, isExperimentalFeatureEnabled } from '../domain/configuration'
 import type { Context } from './context'
 import { sanitize } from './sanitize'
 import { deepClone, getType } from './utils'

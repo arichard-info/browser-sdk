@@ -1,4 +1,4 @@
-import { ExperimentalFeature, isExperimentalFeatureEnabled } from './experimentalFeatures'
+import { ExperimentalFeature, isExperimentalFeatureEnabled } from '../domain/configuration'
 import { computeBytesCount, deepClone, jsonStringify, throttle } from './utils'
 import type { Context, ContextValue } from './context'
 import type { CustomerDataType } from './heavyCustomerDataWarning'
