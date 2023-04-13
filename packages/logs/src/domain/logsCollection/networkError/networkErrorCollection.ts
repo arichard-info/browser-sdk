@@ -60,7 +60,7 @@ export function startNetworkErrorCollection(configuration: LogsConfiguration, li
           },
           status: StatusType.error,
           origin: ErrorSource.NETWORK,
-        } satisfies RawNetworkLogsEvent,
+        },
       })
     }
   }

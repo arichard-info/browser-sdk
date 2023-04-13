@@ -32,7 +32,7 @@ export function startLoggerCollection(lifeCycle: LifeCycle) {
         message: logsMessage.message,
         status: logsMessage.status,
         origin: ErrorSource.LOGGER,
-      } satisfies RawLoggerLogsEvent,
+      },
       messageContext,
       savedCommonContext,
       logger,

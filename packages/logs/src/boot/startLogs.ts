@@ -50,7 +50,7 @@ export function startLogs(
         },
         origin: ErrorSource.AGENT,
         status: StatusType.error,
-      } satisfies RawAgentLogsEvent,
+      },
     })
   const pageExitObservable = createPageExitObservable()
 

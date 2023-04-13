@@ -46,7 +46,7 @@ export function startReportCollection(configuration: LogsConfiguration, lifeCycl
         origin: ErrorSource.REPORT,
         error,
         status,
-      } satisfies RawReportLogsEvent,
+      },
     })
   })
 

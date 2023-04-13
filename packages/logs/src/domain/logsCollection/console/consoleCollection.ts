@@ -34,7 +34,7 @@ export function startConsoleCollection(configuration: LogsConfiguration, lifeCyc
               }
             : undefined,
         status: LogStatusForApi[log.api],
-      } satisfies RawConsoleLogsEvent,
+      },
     })
   })
 
