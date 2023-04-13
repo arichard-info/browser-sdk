@@ -732,6 +732,20 @@ export type RumViewEvent = CommonProperties & {
     [k: string]: unknown
   }
   /**
+   * Session properties
+   */
+  readonly session?: {
+    /**
+     * The precondition that led to the creation of the session
+     */
+    readonly start_reason?: 'app_start' | 'inactivity_timeout' | 'max_duration' | 'stop_api' | 'background_event'
+    /**
+     * Whether this session is currently active. Set to false to manually stop a session
+     */
+    readonly is_active?: boolean
+    [k: string]: unknown
+  }
+  /**
    * Feature flags properties
    */
   readonly feature_flags?: {
