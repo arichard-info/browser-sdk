@@ -12,7 +12,6 @@ import {
   tryToClone,
   isServerError,
 } from '@datadog/browser-core'
-import type { RawNetworkLogsEvent } from '../../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../../configuration'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'

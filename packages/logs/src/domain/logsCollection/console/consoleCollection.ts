@@ -1,6 +1,5 @@
 import type { Context, ClocksState, ConsoleLog } from '@datadog/browser-core'
 import { timeStampNow, ConsoleApiName, ErrorSource, initConsoleObservable } from '@datadog/browser-core'
-import type { RawConsoleLogsEvent } from '../../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../../configuration'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'
