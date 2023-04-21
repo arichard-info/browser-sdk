@@ -29,31 +29,38 @@ export function computeRawError({
   source,
   handling,
 }: RawErrorParams): RawError {
-  if (!stackTrace || (stackTrace.message === undefined && !(originalError instanceof Error))) {
-    const sanitizedError = sanitize(originalError)
-    return {
-      startClocks,
-      source,
-      handling,
-      originalError: sanitizedError,
-      message: `${nonErrorPrefix} ${jsonStringify(sanitizedError)!}`,
-      stack: NO_ERROR_STACK_PRESENT_MESSAGE,
-      handlingStack,
-      type: stackTrace && stackTrace.name,
-    }
-  }
+  const isErrorInstance = originalError instanceof Error
+  const sanitizedError = sanitize(originalError)
+
+  const message = stackTrace?.message
+    ? stackTrace.message
+    : !isErrorInstance
+    ? `${nonErrorPrefix} ${jsonStringify(sanitizedError)!}`
+    : 'Empty message'
+
+  const stack = isValidStackTrace(stackTrace) ? toStackTraceString(stackTrace) : NO_ERROR_STACK_PRESENT_MESSAGE
+  const causes = isErrorInstance ? flattenErrorCauses(originalError as ErrorWithCause, source) : undefined
+  const type = stackTrace && stackTrace.name
 
   return {
     startClocks,
     source,
     handling,
-    originalError,
-    message: stackTrace.message || 'Empty message',
-    stack: toStackTraceString(stackTrace),
     handlingStack,
-    type: stackTrace.name,
-    causes: flattenErrorCauses(originalError as ErrorWithCause, source),
+    originalError,
+    type,
+    message,
+    stack,
+    causes,
   }
+}
+
+function isValidStackTrace(stackTrace?: StackTrace): stackTrace is StackTrace {
+  return (
+    stackTrace !== undefined &&
+    stackTrace.stack.length > 0 &&
+    (stackTrace.stack.length > 1 || stackTrace.stack[0].url !== undefined)
+  )
 }
 
 export function toStackTraceString(stack: StackTrace) {
