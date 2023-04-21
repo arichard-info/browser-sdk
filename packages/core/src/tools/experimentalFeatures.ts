@@ -15,7 +15,6 @@ export enum ExperimentalFeature {
   FEATURE_FLAGS = 'feature_flags',
   RESOURCE_PAGE_STATES = 'resource_page_states',
   COLLECT_FLUSH_REASON = 'collect_flush_reason',
-  REPLAY_JSON_PAYLOAD = 'replay_json_payload',
 }
 
 const enabledExperimentalFeatures: Set<ExperimentalFeature> = new Set()
