@@ -141,31 +141,6 @@ describe('validateAndBuildRumConfiguration', () => {
     })
   })
 
-  describe('deprecated tracingSampleRate', () => {
-    it('defaults to undefined if the option is not provided', () => {
-      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.traceSampleRate).toBeUndefined()
-    })
-
-    it('is set to provided value', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, tracingSampleRate: 50 })!.traceSampleRate
-      ).toBe(50)
-    })
-
-    it('does not validate the configuration if an incorrect value is provided', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, tracingSampleRate: 'foo' as any })
-      ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
-
-      displayErrorSpy.calls.reset()
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, tracingSampleRate: 200 })
-      ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
-    })
-  })
-
   describe('traceSampleRate', () => {
     it('defaults to undefined if the option is not provided', () => {
       expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.traceSampleRate).toBeUndefined()
@@ -186,47 +161,6 @@ describe('validateAndBuildRumConfiguration', () => {
       displayErrorSpy.calls.reset()
       expect(validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 200 })).toBeUndefined()
       expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
-    })
-  })
-
-  describe('allowedTracingOrigins', () => {
-    it('is set to provided value', () => {
-      expect(
-        validateAndBuildRumConfiguration({
-          ...DEFAULT_INIT_CONFIGURATION,
-          allowedTracingOrigins: ['foo'],
-          service: 'bar',
-        })!.allowedTracingUrls
-      ).toEqual([{ match: 'foo', propagatorTypes: ['datadog'] }])
-    })
-
-    it('accepts functions', () => {
-      const originMatchSpy = jasmine.createSpy<(origin: string) => boolean>()
-
-      const tracingUrlOptionMatch = validateAndBuildRumConfiguration({
-        ...DEFAULT_INIT_CONFIGURATION,
-        allowedTracingOrigins: [originMatchSpy],
-        service: 'bar',
-      })!.allowedTracingUrls[0].match as (url: string) => boolean
-
-      expect(typeof tracingUrlOptionMatch).toBe('function')
-      // Replicating behavior from allowedTracingOrigins, new function will treat the origin part of the URL
-      tracingUrlOptionMatch('https://my.origin.com/api')
-      expect(originMatchSpy).toHaveBeenCalledWith('https://my.origin.com')
-    })
-
-    it('does not validate the configuration if a value is provided and service is undefined', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, allowedTracingOrigins: ['foo'] })
-      ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Service needs to be configured when tracing is enabled')
-    })
-
-    it('does not validate the configuration if an incorrect value is provided', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, allowedTracingOrigins: 'foo' as any })
-      ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Allowed Tracing Origins should be an array')
     })
   })
 
@@ -344,30 +278,6 @@ describe('validateAndBuildRumConfiguration', () => {
     })
   })
 
-  describe('deprecated trackInteractions', () => {
-    it('defaults to false', () => {
-      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackUserInteractions).toBeFalse()
-    })
-
-    it('is set to provided value', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackInteractions: true })!
-          .trackUserInteractions
-      ).toBeTrue()
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackInteractions: false })!
-          .trackUserInteractions
-      ).toBeFalse()
-    })
-
-    it('the provided value is cast to boolean', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackInteractions: 'foo' as any })!
-          .trackUserInteractions
-      ).toBeTrue()
-    })
-  })
-
   describe('trackUserInteractions', () => {
     it('defaults to false', () => {
       expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackUserInteractions).toBeFalse()
@@ -387,35 +297,6 @@ describe('validateAndBuildRumConfiguration', () => {
     it('the provided value is cast to boolean', () => {
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackUserInteractions: 'foo' as any })!
-          .trackUserInteractions
-      ).toBeTrue()
-    })
-  })
-
-  describe('trackFrustrations', () => {
-    it('defaults to false', () => {
-      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackFrustrations).toBeFalse()
-    })
-
-    it('the initialization parameter is set to provided value', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackFrustrations: true })!.trackFrustrations
-      ).toBeTrue()
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackFrustrations: false })!.trackFrustrations
-      ).toBeFalse()
-    })
-
-    it('the initialization parameter the provided value is cast to boolean', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackFrustrations: 'foo' as any })!
-          .trackFrustrations
-      ).toBeTrue()
-    })
-
-    it('implies "trackUserInteractions"', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackFrustrations: true })!
           .trackUserInteractions
       ).toBeTrue()
     })
