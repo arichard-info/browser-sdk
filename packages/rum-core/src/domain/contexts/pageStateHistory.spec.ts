@@ -1,10 +1,10 @@
 import type { RelativeTime, ServerDuration } from '@datadog/browser-core'
-import type { Clock } from 'packages/core/test'
-import { mockClock } from 'packages/core/test'
+import type { Clock } from '../../../../core/test'
+import { mockClock } from '../../../../core/test'
 import type { PageStateHistory } from './pageStateHistory'
 import { startPageStateHistory, PageState } from './pageStateHistory'
 
-fdescribe('pageStateHistory', () => {
+describe('pageStateHistory', () => {
   let pageStateHistory: PageStateHistory
   let clock: Clock
   beforeEach(() => {
@@ -40,10 +40,18 @@ fdescribe('pageStateHistory', () => {
     clock.tick(10)
     pageStateHistory.addPageState(PageState.TERMINATED)
 
-    expect(pageStateHistory.findAll(15 as RelativeTime, 20 as RelativeTime)).toEqual([
+    /*
+    page state time    0     10    20    30    40
+    event time                  15<-------->35
+    */
+    const event = {
+      startTime: 15 as RelativeTime,
+      duration: 20 as RelativeTime,
+    }
+    expect(pageStateHistory.findAll(event.startTime, event.duration)).toEqual([
       {
         state: PageState.PASSIVE,
-        start: 0 as ServerDuration,
+        start: -5000000 as ServerDuration,
       },
       {
         state: PageState.HIDDEN,
