@@ -19,6 +19,7 @@ import { validateAndBuildLogsConfiguration } from '../domain/configuration'
 import type { HandlerType, StatusType, LogsMessage } from '../domain/logger'
 import { Logger } from '../domain/logger'
 import type { CommonContext } from '../rawLogsEvent.types'
+import type { LogsEvent } from '../logsEvent.types'
 import type { startLogs } from './startLogs'
 
 export interface LoggerConfiguration {
@@ -30,6 +31,10 @@ export interface LoggerConfiguration {
 export type LogsPublicApi = ReturnType<typeof makeLogsPublicApi>
 
 export type StartLogs = typeof startLogs
+
+export interface LogsPlugin {
+  beforeSend(event: LogsEvent): void | boolean
+}
 
 type StartLogsResult = ReturnType<typeof startLogs>
 
@@ -67,6 +72,11 @@ export function makeLogsPublicApi(startLogsImpl: StartLogs) {
     }
   }
 
+  const logsPlugins: LogsPlugin[] = []
+  function registerPlugins(...newLogsPlugins: LogsPlugin[]) {
+    logsPlugins.push(...newLogsPlugins)
+  }
+
   return makePublicApi({
     logger: mainLogger,
 
@@ -91,7 +101,8 @@ export function makeLogsPublicApi(startLogsImpl: StartLogs) {
         initConfiguration,
         configuration,
         buildCommonContext,
-        mainLogger
+        mainLogger,
+        logsPlugins
       ))
 
       beforeInitLoggerLog.drain()
@@ -151,6 +162,8 @@ export function makeLogsPublicApi(startLogsImpl: StartLogs) {
     removeUserProperty: monitor(userContextManager.removeContextProperty),
 
     clearUser: monitor(userContextManager.clearContext),
+
+    registerPlugins: monitor(registerPlugins),
   })
 
   function overrideInitConfigurationForBridge<C extends InitConfiguration>(initConfiguration: C): C {
