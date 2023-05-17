@@ -11,7 +11,6 @@ import {
 import { createDOMMutationObservable } from '../browser/domMutationObservable'
 import { startPerformanceCollection } from '../browser/performanceCollection'
 import { startRumAssembly } from '../domain/assembly'
-import { startForegroundContexts } from '../domain/contexts/foregroundContexts'
 import { startInternalContext } from '../domain/contexts/internalContext'
 import { LifeCycle, LifeCycleEventType } from '../domain/lifeCycle'
 import { startViewContexts } from '../domain/contexts/viewContexts'
@@ -103,18 +102,17 @@ export function startRum(
   const domMutationObservable = createDOMMutationObservable()
   const locationChangeObservable = createLocationChangeObservable(location)
 
-  const { viewContexts, foregroundContexts, pageStateHistory, urlContexts, actionContexts, addAction } =
-    startRumEventCollection(
-      lifeCycle,
-      configuration,
-      location,
-      session,
-      locationChangeObservable,
-      domMutationObservable,
-      () => buildCommonContext(globalContextManager, userContextManager, recorderApi),
-      reportError,
-      rumPlugins
-    )
+  const { viewContexts, pageStateHistory, urlContexts, actionContexts, addAction } = startRumEventCollection(
+    lifeCycle,
+    configuration,
+    location,
+    session,
+    locationChangeObservable,
+    domMutationObservable,
+    () => buildCommonContext(globalContextManager, userContextManager, recorderApi),
+    reportError,
+    rumPlugins
+  )
 
   addTelemetryConfiguration(serializeRumConfiguration(initConfiguration))
 
@@ -126,13 +124,12 @@ export function startRum(
     location,
     domMutationObservable,
     locationChangeObservable,
-    foregroundContexts,
     featureFlagContexts,
     pageStateHistory,
     recorderApi,
     initialViewOptions
   )
-  const { addError } = startErrorCollection(lifeCycle, foregroundContexts, featureFlagContexts)
+  const { addError } = startErrorCollection(lifeCycle, pageStateHistory, featureFlagContexts)
 
   startRequestCollection(lifeCycle, configuration, session)
   startPerformanceCollection(lifeCycle, configuration)
@@ -182,14 +179,13 @@ export function startRumEventCollection(
   const viewContexts = startViewContexts(lifeCycle)
   const urlContexts = startUrlContexts(lifeCycle, locationChangeObservable, location)
 
-  const foregroundContexts = startForegroundContexts()
   const pageStateHistory = startPageStateHistory()
 
   const { addAction, actionContexts } = startActionCollection(
     lifeCycle,
     domMutationObservable,
     configuration,
-    foregroundContexts
+    pageStateHistory
   )
 
   startRumAssembly(
@@ -206,14 +202,13 @@ export function startRumEventCollection(
 
   return {
     viewContexts,
-    foregroundContexts,
     pageStateHistory,
     urlContexts,
     addAction,
     actionContexts,
     stop: () => {
       viewContexts.stop()
-      foregroundContexts.stop()
+      pageStateHistory.stop()
     },
   }
 }
