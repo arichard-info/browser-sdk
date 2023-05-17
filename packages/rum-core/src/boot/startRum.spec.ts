@@ -51,7 +51,7 @@ function startRumStub(
   pageStateHistory: PageStateHistory,
   reportError: (error: RawError) => void
 ) {
-  const { stop: rumEventCollectionStop, foregroundContexts } = startRumEventCollection(
+  const { stop: rumEventCollectionStop } = startRumEventCollection(
     lifeCycle,
     configuration,
     location,
@@ -63,7 +63,8 @@ function startRumStub(
       user: {},
       hasReplay: undefined,
     }),
-    reportError
+    reportError,
+    []
   )
   const { stop: viewCollectionStop } = startViewCollection(
     lifeCycle,
@@ -71,7 +72,6 @@ function startRumStub(
     location,
     domMutationObservable,
     locationChangeObservable,
-    foregroundContexts,
     startFeatureFlagContexts(lifeCycle),
     pageStateHistory,
     noopRecorderApi
@@ -339,7 +339,8 @@ describe('view events', () => {
         configuration,
         noopRecorderApi,
         createContextManager(CustomerDataType.GlobalContext),
-        createContextManager(CustomerDataType.User)
+        createContextManager(CustomerDataType.User),
+        []
       )
     })
     interceptor = interceptRequests()

@@ -30,6 +30,8 @@ import type { RumConfiguration, RumInitConfiguration } from '../domain/configura
 import { validateAndBuildRumConfiguration } from '../domain/configuration'
 import type { ViewOptions } from '../domain/rumEventsCollection/view/trackViews'
 import { buildCommonContext } from '../domain/contexts/commonContext'
+import type { RumEventDomainContext } from '../domainContext.types'
+import type { RumEvent } from '../rumEvent.types'
 import type { startRum } from './startRum'
 
 export type RumPublicApi = ReturnType<typeof makeRumPublicApi>
@@ -55,6 +57,11 @@ export interface RecorderApi {
     viewContexts: ViewContexts
   ) => string | undefined
 }
+
+export interface RumPlugin {
+  beforeSend(event: RumEvent, context: RumEventDomainContext): void | boolean
+}
+
 interface RumPublicApiOptions {
   ignoreInitIfSyntheticsWillInjectRum?: boolean
 }
@@ -96,6 +103,11 @@ export function makeRumPublicApi(
 
   let addFeatureFlagEvaluationStrategy: StartRumResult['addFeatureFlagEvaluation'] = (key: string, value: any) => {
     bufferApiCalls.add(() => addFeatureFlagEvaluationStrategy(key, value))
+  }
+
+  const rumPlugins: RumPlugin[] = []
+  function registerPlugins(...newRumPlugins: RumPlugin[]) {
+    rumPlugins.push(...newRumPlugins)
   }
 
   function initRum(initConfiguration: RumInitConfiguration) {
@@ -154,6 +166,7 @@ export function makeRumPublicApi(
       recorderApi,
       globalContextManager,
       userContextManager,
+      rumPlugins,
       initialViewOptions
     )
     getSessionReplayLinkStrategy = () =>
@@ -269,6 +282,8 @@ export function makeRumPublicApi(
       addFeatureFlagEvaluationStrategy(sanitize(key)!, sanitize(value))
     }),
     getSessionReplayLink: monitor(() => getSessionReplayLinkStrategy()),
+
+    registerPlugins: monitor(registerPlugins),
   })
 
   return rumPublicApi
