@@ -43,6 +43,11 @@ const VIEW: ViewEvent = {
     largestContentfulPaint: 10 as Duration,
     loadEvent: 10 as Duration,
   },
+  scrollMetrics: {
+    maxScrollDepth: 1000,
+    maxscrollHeight: 3000,
+    maxScrollDepthTime: 4000000000 as Duration,
+  },
   sessionIsActive: true,
 }
 
@@ -145,6 +150,9 @@ describe('viewCollection', () => {
         is_active: undefined,
       },
       feature_flags: undefined,
+      display: {
+        scroll: { max_depth: 1000, max_scroll_height: 3000, max_depth_time: 4000000000000000 as ServerDuration },
+      },
     })
   })
 
