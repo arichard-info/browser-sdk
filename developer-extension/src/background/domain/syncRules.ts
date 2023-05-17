@@ -1,5 +1,5 @@
 import type { NetRequestRulesOptions } from '../../common/types'
-import { DEV_LOGS_URL, DEV_RUM_SLIM_URL, DEV_RUM_URL, INTAKE_DOMAINS } from '../../common/constants'
+import { INTAKE_DOMAINS } from '../../common/constants'
 import { createLogger } from '../../common/logger'
 import { onDevtoolsDisconnection, onDevtoolsMessage } from '../devtoolsPanelConnection'
 
@@ -50,28 +50,9 @@ async function getExistingRulesInfos(tabId: number) {
   return { tabRuleIds, nextRuleId }
 }
 
-function buildRules(
-  { tabId, useDevBundles, useRumSlim, blockIntakeRequests }: NetRequestRulesOptions,
-  nextRuleId: number
-) {
+function buildRules({ tabId, blockIntakeRequests }: NetRequestRulesOptions, nextRuleId: number) {
   const rules: chrome.declarativeNetRequest.Rule[] = []
   let id = nextRuleId
-
-  if (useDevBundles) {
-    const devRumUrl = useRumSlim ? DEV_RUM_SLIM_URL : DEV_RUM_URL
-    logger.log('add redirect to dev bundles rules')
-    rules.push(
-      createRedirectRule(/^https:\/\/.*\/datadog-rum(-v\d|-canary|-staging)?\.js$/, { url: devRumUrl }),
-      createRedirectRule(/^https:\/\/.*\/datadog-rum-slim(-v\d|-canary|-staging)?\.js$/, {
-        url: DEV_RUM_SLIM_URL,
-      }),
-      createRedirectRule(/^https:\/\/.*\/datadog-logs(-v\d|-canary|-staging)?\.js$/, { url: DEV_LOGS_URL }),
-      createRedirectRule('https://localhost:8443/static/datadog-rum-hotdog.js', { url: devRumUrl })
-    )
-  } else if (useRumSlim) {
-    logger.log('add redirect to rum slim rule')
-    rules.push(createRedirectRule(/^(https:\/\/.*\/datadog-rum)(-slim)?/, { regexSubstitution: '\\1-slim' }))
-  }
 
   if (blockIntakeRequests) {
     logger.log('add block intake rules')
@@ -83,22 +64,6 @@ function buildRules(
           type: chrome.declarativeNetRequest.RuleActionType.BLOCK,
         },
       })
-    }
-  }
-
-  function createRedirectRule(
-    filter: RegExp | string,
-    redirect: chrome.declarativeNetRequest.Redirect
-  ): chrome.declarativeNetRequest.Rule {
-    const tabIds = [tabId]
-    return {
-      id: id++,
-      action: {
-        type: chrome.declarativeNetRequest.RuleActionType.REDIRECT,
-        redirect,
-      },
-      condition:
-        typeof filter === 'string' ? { tabIds, urlFilter: `|${filter}|` } : { tabIds, regexFilter: filter.source },
     }
   }
 

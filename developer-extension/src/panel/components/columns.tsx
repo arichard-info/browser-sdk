@@ -12,7 +12,7 @@ export function Columns({ children }: { children: React.ReactNode }) {
 function Column({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <Grid.Col md={4} sm={12}>
-      <Title order={3}>{title}</Title>
+      <Title>{title}</Title>
       <Space h="sm" />
       {children || '(empty)'}
       <Space h="sm" />

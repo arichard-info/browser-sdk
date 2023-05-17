@@ -19,6 +19,20 @@ export function App() {
   return (
     <MantineProvider
       theme={{
+        // Customize the theme to be closer to devtools styles
+        fontFamily: 'Helvetica Neue',
+        fontSizes: {
+          xs: '0.65rem',
+          sm: '0.8rem',
+          md: '0.9rem',
+          lg: '1rem',
+          xl: '1.2rem',
+        },
+        headings: {
+          sizes: {
+            h1: { fontSize: '1rem' },
+          },
+        },
         colorScheme,
         globalStyles: () => ({
           body: {

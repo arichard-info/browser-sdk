@@ -48,6 +48,18 @@ module.exports = (_env, argv) => {
       },
     }),
     baseConfig({
+      entry: '../packages/rum/bundle/datadog-rum.js',
+      output: {
+        filename: 'datadog-rum.js',
+      },
+    }),
+    baseConfig({
+      entry: '../packages/logs/bundle/datadog-logs.js',
+      output: {
+        filename: 'datadog-logs.js',
+      },
+    }),
+    baseConfig({
       entry: './src/devtools',
       output: {
         filename: 'devtools.js',

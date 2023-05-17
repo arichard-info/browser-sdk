@@ -1,8 +1,9 @@
-import { Anchor, Button, Divider, Group, Space, Text } from '@mantine/core'
+import { Anchor, Button, Divider, Group, Space, Tabs, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
 import React from 'react'
 import { evalInWindow } from '../../evalInWindow'
-import { useSdkInfos } from '../../hooks/useSdkInfos'
+import type { SdkInfos } from '../../hooks/useSdksInfos'
+import { useSdksInfos } from '../../hooks/useSdksInfos'
 import { Columns } from '../columns'
 import { Json } from '../json'
 import { TabBase } from '../tabBase'
@@ -11,7 +12,7 @@ import { createLogger } from '../../../common/logger'
 const logger = createLogger('infosTab')
 
 export function InfosTab() {
-  const infos = useSdkInfos()
+  const infos = useSdksInfos()
   if (!infos) {
     return null
   }
@@ -43,58 +44,98 @@ export function InfosTab() {
             </>
           )}
         </Columns.Column>
-        <Columns.Column title="RUM">
-          {infos.rum && (
-            <>
-              {sessionId && (
-                <Group>
-                  <AppLink
-                    config={infos.rum.config}
-                    path="rum/explorer"
-                    params={{
-                      query: `@session.id:${sessionId}`,
-                      live: 'true',
-                    }}
-                  >
-                    Explorer
-                  </AppLink>
-                  <Divider sx={{ height: '24px' }} orientation="vertical" />
-                  <AppLink config={infos.rum.config} path={`rum/replay/sessions/${sessionId}`} params={{}}>
-                    Session Replay
-                  </AppLink>
-                </Group>
+        <Columns.Column title={`RUM ${infos.rum.length > 1 ? `(${String(infos.rum.length)} instances)` : ''}`}>
+          {infos.rum.length && (
+            <SdkTabs
+              sdksInfos={infos.rum}
+              renderSdkInfos={(sdkInfos) => (
+                <>
+                  {sessionId && (
+                    <Group>
+                      <AppLink
+                        config={sdkInfos.config}
+                        path="rum/explorer"
+                        params={{
+                          query: `source:browser @session.id:${sessionId}`,
+                          live: 'true',
+                        }}
+                      >
+                        Explorer
+                      </AppLink>
+                      <Divider sx={{ height: '24px' }} orientation="vertical" />
+                      <AppLink config={sdkInfos.config} path={`rum/replay/sessions/${sessionId}`} params={{}}>
+                        Session Replay
+                      </AppLink>
+                    </Group>
+                  )}
+                  <Entry name="Version" value={sdkInfos.version} />
+                  <Entry name="Configuration" value={sdkInfos.config} />
+                  <Entry name="Internal context" value={sdkInfos.internalContext} />
+                  <Entry name="Global context" value={sdkInfos.globalContext} />
+                  <Entry name="User" value={sdkInfos.user} />
+                </>
               )}
-              <Entry name="Version" value={infos.rum.version} />
-              <Entry name="Configuration" value={infos.rum.config} />
-              <Entry name="Internal context" value={infos.rum.internalContext} />
-              <Entry name="Global context" value={infos.rum.globalContext} />
-              <Entry name="User" value={infos.rum.user} />
-            </>
+            />
           )}
         </Columns.Column>
-        <Columns.Column title="Logs">
-          {infos.logs && (
-            <>
-              {sessionId && (
-                <AppLink
-                  config={infos.logs.config}
-                  path="logs"
-                  params={{
-                    query: `source:browser @session_id:${sessionId}`,
-                  }}
-                >
-                  Explorer
-                </AppLink>
+        <Columns.Column title={`Logs ${infos.logs.length > 1 ? `(${String(infos.logs.length)} instances)` : ''}`}>
+          {infos.logs.length && (
+            <SdkTabs
+              sdksInfos={infos.logs}
+              renderSdkInfos={(sdkInfos) => (
+                <>
+                  {sessionId && (
+                    <AppLink
+                      config={sdkInfos.config}
+                      path="logs"
+                      params={{
+                        query: `source:browser @session_id:${sessionId}`,
+                      }}
+                    >
+                      Explorer
+                    </AppLink>
+                  )}
+                  <Entry name="Version" value={sdkInfos.version} />
+                  <Entry name="Configuration" value={sdkInfos.config} />
+                  <Entry name="Global context" value={sdkInfos.globalContext} />
+                  <Entry name="User" value={sdkInfos.user} />
+                </>
               )}
-              <Entry name="Version" value={infos.logs.version} />
-              <Entry name="Configuration" value={infos.logs.config} />
-              <Entry name="Global context" value={infos.logs.globalContext} />
-              <Entry name="User" value={infos.logs.user} />
-            </>
+            />
           )}
         </Columns.Column>
       </Columns>
     </TabBase>
+  )
+}
+
+function SdkTabs<T extends SdkInfos>({
+  sdksInfos,
+  renderSdkInfos,
+}: {
+  sdksInfos: T[]
+  renderSdkInfos: (sdkInfos: T) => ReactNode
+}) {
+  return (
+    <Tabs color="violet" defaultValue={String(0)} variant="pills" radius="xl">
+      {sdksInfos && (
+        <>
+          <Tabs.List>
+            {sdksInfos.map((infos, index) => (
+              <Tabs.Tab value={String(index)}>{infos.version}</Tabs.Tab>
+            ))}
+          </Tabs.List>
+          {sdksInfos.map(
+            (infos, index) =>
+              infos && (
+                <Tabs.Panel value={String(index)} sx={{ flex: 1, minHeight: 0 }}>
+                  {renderSdkInfos(infos)}
+                </Tabs.Panel>
+              )
+          )}
+        </>
+      )}
+    </Tabs>
   )
 }
 
@@ -120,15 +161,15 @@ function AppLink({
 
 function Entry({ name, value }: { name: string; value: any }) {
   return (
-    <Text size="sm" component="div">
+    <Text sx={{ fontFamily: 'menlo, sans-serif', fontSize: 11 }} component="div">
       {typeof value === 'string' ? (
         <>
           {name}: {value}
         </>
       ) : value ? (
-        <>
-          {name}: <Json name="" src={value} collapsed={1} />
-        </>
+        <div style={{ marginLeft: -17 }}>
+          <Json name={name} src={value} collapsed={1} />
+        </div>
       ) : (
         <>{name}: (empty)</>
       )}
