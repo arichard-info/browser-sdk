@@ -29,6 +29,8 @@ import type { Timings } from './trackInitialViewTimings'
 import { trackInitialViewTimings } from './trackInitialViewTimings'
 import { trackViewMetrics } from './trackViewMetrics'
 import { trackViewEventCounts } from './trackViewEventCounts'
+import type { ScrollMetrics } from './trackScrollMetrics'
+import { trackScrollMetrics } from './trackScrollMetrics'
 
 export interface ViewEvent {
   id: string
@@ -47,6 +49,7 @@ export interface ViewEvent {
   loadingTime?: Duration
   loadingType: ViewLoadingType
   cumulativeLayoutShift?: number
+  scrollMetrics: ScrollMetrics
 }
 
 export interface ViewCreatedEvent {
@@ -187,6 +190,7 @@ function newView(
     viewMetrics,
   } = trackViewMetrics(lifeCycle, domMutationObservable, configuration, scheduleViewUpdate, loadingType, startClocks)
 
+  const { scrollMetrics, stop: stopScrollMetricsTracking } = trackScrollMetrics(startClocks)
   const { scheduleStop: scheduleStopInitialViewTimingsTracking, timings } =
     loadingType === ViewLoadingType.INITIAL_LOAD
       ? trackInitialViewTimings(lifeCycle, setLoadEvent, scheduleViewUpdate)
@@ -206,7 +210,6 @@ function newView(
 
   function triggerViewUpdate() {
     cancelScheduleViewUpdate()
-
     documentVersion += 1
     const currentEnd = endClocks === undefined ? timeStampNow() : endClocks.timeStamp
     lifeCycle.notify(
@@ -227,6 +230,7 @@ function newView(
           isActive: endClocks === undefined,
           sessionIsActive,
           eventCounts,
+          scrollMetrics,
         },
         viewMetrics
       )
@@ -250,6 +254,7 @@ function newView(
       stopViewMetricsTracking()
       scheduleStopInitialViewTimingsTracking()
       scheduleStopEventCountsTracking()
+      stopScrollMetricsTracking()
       triggerViewUpdate()
     },
     addTiming(name: string, time: RelativeTime | TimeStamp) {
