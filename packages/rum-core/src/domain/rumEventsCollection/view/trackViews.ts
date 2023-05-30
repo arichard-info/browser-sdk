@@ -27,6 +27,7 @@ import type { LocationChange } from '../../../browser/locationChangeObservable'
 import type { RumConfiguration } from '../../configuration'
 import type { Timings } from './trackInitialViewTimings'
 import { trackInitialViewTimings } from './trackInitialViewTimings'
+import type { ScrollMetrics } from './trackViewMetrics'
 import { trackViewMetrics } from './trackViewMetrics'
 import { trackViewEventCounts } from './trackViewEventCounts'
 
@@ -47,6 +48,7 @@ export interface ViewEvent {
   loadingTime?: Duration
   loadingType: ViewLoadingType
   cumulativeLayoutShift?: number
+  scrollMetrics: ScrollMetrics
 }
 
 export interface ViewCreatedEvent {
@@ -185,6 +187,7 @@ function newView(
     setLoadEvent,
     stop: stopViewMetricsTracking,
     viewMetrics,
+    scrollMetrics,
   } = trackViewMetrics(lifeCycle, domMutationObservable, configuration, scheduleViewUpdate, loadingType, startClocks)
 
   const { scheduleStop: scheduleStopInitialViewTimingsTracking, timings } =
@@ -206,7 +209,6 @@ function newView(
 
   function triggerViewUpdate() {
     cancelScheduleViewUpdate()
-
     documentVersion += 1
     const currentEnd = endClocks === undefined ? timeStampNow() : endClocks.timeStamp
     lifeCycle.notify(
@@ -227,6 +229,7 @@ function newView(
           isActive: endClocks === undefined,
           sessionIsActive,
           eventCounts,
+          scrollMetrics,
         },
         viewMetrics
       )

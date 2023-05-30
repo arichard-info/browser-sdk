@@ -107,10 +107,20 @@ export interface RawRumViewEvent {
     is_active: false | undefined
   }
   feature_flags?: Context
+  display?: ViewDisplay
   _dd: {
     document_version: number
     replay_stats?: ReplayStats
     page_states?: PageStateServerEntry[]
+  }
+}
+
+interface ViewDisplay {
+  scroll: {
+    max_depth?: number
+    max_scroll_height?: number
+    max_depth_time?: ServerDuration
+    max_scroll_top?: number
   }
 }
 
