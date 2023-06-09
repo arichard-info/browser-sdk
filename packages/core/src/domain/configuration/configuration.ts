@@ -8,9 +8,8 @@ import { isPercentage } from '../../tools/utils/numberUtils'
 import { ONE_KIBI_BYTE } from '../../tools/utils/byteUtils'
 import { objectHasValue } from '../../tools/utils/objectUtils'
 import { assign } from '../../tools/utils/polyfills'
-import { getSessionStoreStrategyType } from '../session/sessionStore'
-import type { SessionStoreOptions, SessionStoreStrategyType } from '../session/storeStrategies/sessionStoreStrategy'
-import { buildCookieOptions } from '../session/storeStrategies/sessionInCookie'
+import { selectSessionStoreStrategyType } from '../session/sessionStore'
+import type { SessionStoreStrategyType } from '../session/storeStrategies/sessionStoreStrategy'
 import type { TransportConfiguration } from './transportConfiguration'
 import { computeTransportConfiguration } from './transportConfiguration'
 
@@ -69,7 +68,6 @@ interface ReplicaUserConfiguration {
 export interface Configuration extends TransportConfiguration {
   // Built from init configuration
   beforeSend: GenericBeforeSendCallback | undefined
-  sessionStoreOptions: SessionStoreOptions
   sessionStoreStrategyType: SessionStoreStrategyType | undefined
   sessionSampleRate: number
   telemetrySampleRate: number
@@ -121,18 +119,11 @@ export function validateAndBuildConfiguration(initConfiguration: InitConfigurati
     )
   }
 
-  // Build Session Store options
-  const sessionStoreOptions: SessionStoreOptions = {
-    cookie: buildCookieOptions(initConfiguration),
-    allowFallbackToLocalStorage: !!initConfiguration.allowFallbackToLocalStorage,
-  }
-
   return assign(
     {
       beforeSend:
         initConfiguration.beforeSend && catchUserErrors(initConfiguration.beforeSend, 'beforeSend threw an error:'),
-      sessionStoreOptions,
-      sessionStoreStrategyType: getSessionStoreStrategyType(sessionStoreOptions),
+      sessionStoreStrategyType: selectSessionStoreStrategyType(initConfiguration),
       sessionSampleRate: initConfiguration.sessionSampleRate ?? 100,
       telemetrySampleRate: initConfiguration.telemetrySampleRate ?? 20,
       telemetryConfigurationSampleRate: initConfiguration.telemetryConfigurationSampleRate ?? 5,
@@ -164,18 +155,19 @@ export function validateAndBuildConfiguration(initConfiguration: InitConfigurati
   )
 }
 
-export function serializeConfiguration(configuration: InitConfiguration): Partial<RawTelemetryConfiguration> {
+export function serializeConfiguration(initConfiguration: InitConfiguration): Partial<RawTelemetryConfiguration> {
   return {
-    session_sample_rate: configuration.sessionSampleRate,
-    telemetry_sample_rate: configuration.telemetrySampleRate,
-    telemetry_configuration_sample_rate: configuration.telemetryConfigurationSampleRate,
-    use_before_send: !!configuration.beforeSend,
-    use_cross_site_session_cookie: configuration.useCrossSiteSessionCookie,
-    use_secure_session_cookie: configuration.useSecureSessionCookie,
-    use_proxy: !!configuration.proxy,
-    silent_multiple_init: configuration.silentMultipleInit,
-    track_session_across_subdomains: configuration.trackSessionAcrossSubdomains,
-    track_resources: configuration.trackResources,
-    track_long_task: configuration.trackLongTasks,
+    session_sample_rate: initConfiguration.sessionSampleRate,
+    telemetry_sample_rate: initConfiguration.telemetrySampleRate,
+    telemetry_configuration_sample_rate: initConfiguration.telemetryConfigurationSampleRate,
+    use_before_send: !!initConfiguration.beforeSend,
+    use_cross_site_session_cookie: initConfiguration.useCrossSiteSessionCookie,
+    use_secure_session_cookie: initConfiguration.useSecureSessionCookie,
+    use_proxy: !!initConfiguration.proxy,
+    silent_multiple_init: initConfiguration.silentMultipleInit,
+    track_session_across_subdomains: initConfiguration.trackSessionAcrossSubdomains,
+    track_resources: initConfiguration.trackResources,
+    track_long_task: initConfiguration.trackLongTasks,
+    allowFallbackToLocalStorage: !!initConfiguration.allowFallbackToLocalStorage,
   }
 }
