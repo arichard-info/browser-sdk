@@ -1,19 +1,20 @@
 import { generateUUID } from '../../../tools/utils/stringUtils'
 import type { SessionState } from '../sessionState'
 import { toSessionString, toSessionState } from '../sessionState'
-import type { SessionStoreStrategy } from './sessionStoreStrategy'
+import type { SessionStoreStrategy, SessionStoreStrategyType } from './sessionStoreStrategy'
 
 export const LOCAL_STORAGE_KEY = '_dd_s'
+const LOCAL_STORAGE_TEST_KEY = '_dd_test_'
 
-export function checkLocalStorageAvailability() {
+export function selectLocalStorageStrategy(): SessionStoreStrategyType | undefined {
   try {
     const id = generateUUID()
-    localStorage.setItem(`_dd_s_${id}`, id)
-    const retrievedId = localStorage.getItem(`_dd_s_${id}`)
-    localStorage.removeItem(`_dd_s_${id}`)
-    return id === retrievedId
+    localStorage.setItem(`${LOCAL_STORAGE_TEST_KEY}${id}`, id)
+    const retrievedId = localStorage.getItem(`${LOCAL_STORAGE_TEST_KEY}${id}`)
+    localStorage.removeItem(`${LOCAL_STORAGE_TEST_KEY}${id}`)
+    return id === retrievedId ? { type: 'LocalStorage' } : undefined
   } catch (e) {
-    return false
+    return undefined
   }
 }
 

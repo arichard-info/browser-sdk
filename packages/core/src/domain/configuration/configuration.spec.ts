@@ -103,26 +103,67 @@ describe('validateAndBuildConfiguration', () => {
   describe('cookie options', () => {
     it('should not be secure nor crossSite by default', () => {
       const configuration = validateAndBuildConfiguration({ clientToken })!
-      expect(configuration.sessionStoreOptions.cookie).toEqual({ secure: false, crossSite: false })
+      expect(configuration.sessionStoreStrategyType).toEqual({
+        type: 'Cookie',
+        cookieOptions: { secure: false, crossSite: false },
+      })
     })
 
     it('should be secure when `useSecureSessionCookie` is truthy', () => {
       const configuration = validateAndBuildConfiguration({ clientToken, useSecureSessionCookie: true })!
-      expect(configuration.sessionStoreOptions.cookie).toEqual({ secure: true, crossSite: false })
+      expect(configuration.sessionStoreStrategyType).toEqual({
+        type: 'Cookie',
+        cookieOptions: { secure: true, crossSite: false },
+      })
     })
 
     it('should be secure and crossSite when `useCrossSiteSessionCookie` is truthy', () => {
       const configuration = validateAndBuildConfiguration({ clientToken, useCrossSiteSessionCookie: true })!
-      expect(configuration.sessionStoreOptions.cookie).toEqual({ secure: true, crossSite: true })
+      expect(configuration.sessionStoreStrategyType).toEqual({
+        type: 'Cookie',
+        cookieOptions: { secure: true, crossSite: true },
+      })
     })
 
     it('should have domain when `trackSessionAcrossSubdomains` is truthy', () => {
       const configuration = validateAndBuildConfiguration({ clientToken, trackSessionAcrossSubdomains: true })!
-      expect(configuration.sessionStoreOptions.cookie).toEqual({
-        secure: false,
-        crossSite: false,
-        domain: jasmine.any(String),
+      expect(configuration.sessionStoreStrategyType).toEqual({
+        type: 'Cookie',
+        cookieOptions: {
+          secure: false,
+          crossSite: false,
+          domain: jasmine.any(String),
+        },
       })
+    })
+  })
+
+  describe('allowFallbackToLocalStorage', () => {
+    it('should not be enabled (false) by default', () => {
+      spyOnProperty(document, 'cookie', 'get').and.returnValue('')
+      const configuration = validateAndBuildConfiguration({ clientToken })
+      expect(configuration?.sessionStoreStrategyType).toBeUndefined()
+    })
+
+    it('should contain cookie in the configuration by default', () => {
+      const configuration = validateAndBuildConfiguration({ clientToken, allowFallbackToLocalStorage: true })
+      expect(configuration?.sessionStoreStrategyType).toEqual({
+        type: 'Cookie',
+        cookieOptions: { secure: false, crossSite: false },
+      })
+    })
+
+    it('should contain local storage in the configuration when enabled and cookies are not available', () => {
+      spyOnProperty(document, 'cookie', 'get').and.returnValue('')
+      const configuration = validateAndBuildConfiguration({ clientToken, allowFallbackToLocalStorage: true })
+      expect(configuration?.sessionStoreStrategyType).toEqual({ type: 'LocalStorage' })
+    })
+
+    it('should not contain any available storage if both cookies and local storage are unavailable', () => {
+      spyOnProperty(document, 'cookie', 'get').and.returnValue('')
+      spyOn(Storage.prototype, 'getItem').and.throwError('unavailable')
+      const configuration = validateAndBuildConfiguration({ clientToken, allowFallbackToLocalStorage: true })
+      expect(configuration?.sessionStoreStrategyType).toBeUndefined()
     })
   })
 
