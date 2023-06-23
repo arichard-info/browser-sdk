@@ -44,9 +44,9 @@ const VIEW: ViewEvent = {
   },
   scrollMetrics: {
     maxDepth: 2000,
-    scrollHeight: 3000,
+    maxDepthScrollHeight: 3000,
     maxDepthTime: 4000000000 as Duration,
-    scrollTop: 1000,
+    maxDepthScrollTop: 1000,
   },
   sessionIsActive: true,
 }
@@ -157,6 +157,7 @@ describe('viewCollection', () => {
           max_depth_scroll_top: 1000,
         },
       },
+      privacy: { replay_level: 'mask-user-input' },
     })
   })
 
