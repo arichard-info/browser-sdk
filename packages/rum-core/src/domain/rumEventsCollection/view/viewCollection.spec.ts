@@ -157,7 +157,7 @@ describe('viewCollection', () => {
           max_depth_scroll_top: 1000,
         },
       },
-      privacy: { replay_level: 'mask-user-input' },
+      privacy: { replay_level: 'mask' },
     })
   })
 
