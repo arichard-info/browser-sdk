@@ -11,7 +11,6 @@ import {
   relativeNow,
 } from '@datadog/browser-core'
 
-import type { RecorderApi } from '../../../boot/rumPublicApi'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'
 import type {
@@ -20,7 +19,7 @@ import type {
   RumPerformancePaintTiming,
 } from '../../../browser/performanceCollection'
 import { trackFirstHidden } from './trackFirstHidden'
-import { addWebVitalTelemetryDebug } from './addWebVitalTelemetryDebug'
+import type { WebVitalTelemetryDebug } from './startWebVitalTelemetryDebug'
 
 // Discard LCP and FCP timings above a certain delay to avoid incorrect data
 // It happens in some cases like sleep mode or some browser implementations
@@ -48,7 +47,7 @@ export interface Timings {
 
 export function trackInitialViewTimings(
   lifeCycle: LifeCycle,
-  recorderApi: RecorderApi,
+  webVitalTelemetryDebug: WebVitalTelemetryDebug,
   setLoadEvent: (loadEnd: Duration) => void,
   scheduleViewUpdate: () => void
 ) {
@@ -70,7 +69,7 @@ export function trackInitialViewTimings(
     lifeCycle,
     window,
     (largestContentfulPaint, lcpElement) => {
-      addWebVitalTelemetryDebug(recorderApi, 'LCP', lcpElement, largestContentfulPaint)
+      webVitalTelemetryDebug.addWebVitalTelemetryDebug('LCP', lcpElement, largestContentfulPaint)
 
       setTimings({
         largestContentfulPaint,
@@ -81,7 +80,7 @@ export function trackInitialViewTimings(
   const { stop: stopFIDTracking } = trackFirstInputTimings(
     lifeCycle,
     ({ firstInputDelay, firstInputTime, firstInputTarget }) => {
-      addWebVitalTelemetryDebug(recorderApi, 'FID', firstInputTarget, firstInputTime)
+      webVitalTelemetryDebug.addWebVitalTelemetryDebug('FID', firstInputTarget, firstInputTime)
 
       setTimings({
         firstInputDelay,

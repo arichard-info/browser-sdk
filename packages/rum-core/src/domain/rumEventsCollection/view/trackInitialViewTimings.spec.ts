@@ -2,7 +2,7 @@ import type { Duration, RelativeTime } from '@datadog/browser-core'
 import { DOM_EVENT } from '@datadog/browser-core'
 import { restorePageVisibility, setPageVisibility, createNewEvent } from '@datadog/browser-core/test'
 import type { TestSetupBuilder } from '../../../../test'
-import { noopRecorderApi, setup } from '../../../../test'
+import { noopWebVitalTelemetryDebug, setup } from '../../../../test'
 import type {
   RumFirstInputTiming,
   RumLargestContentfulPaintTiming,
@@ -60,10 +60,11 @@ describe('trackInitialViewTimings', () => {
   beforeEach(() => {
     scheduleViewUpdateSpy = jasmine.createSpy()
     setLoadEventSpy = jasmine.createSpy()
+
     setupBuilder = setup().beforeBuild(({ lifeCycle }) => {
       trackInitialViewTimingsResult = trackInitialViewTimings(
         lifeCycle,
-        noopRecorderApi,
+        noopWebVitalTelemetryDebug,
         setLoadEventSpy,
         scheduleViewUpdateSpy
       )

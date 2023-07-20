@@ -17,7 +17,6 @@ import {
   clearInterval,
 } from '@datadog/browser-core'
 
-import type { RecorderApi } from '../../../boot/rumPublicApi'
 import type { ViewCustomTimings } from '../../../rawRumEvent.types'
 import { ViewLoadingType } from '../../../rawRumEvent.types'
 
@@ -31,6 +30,7 @@ import { trackInitialViewTimings } from './trackInitialViewTimings'
 import type { ScrollMetrics } from './trackViewMetrics'
 import { trackViewMetrics } from './trackViewMetrics'
 import { trackViewEventCounts } from './trackViewEventCounts'
+import type { WebVitalTelemetryDebug } from './startWebVitalTelemetryDebug'
 
 export interface ViewEvent {
   id: string
@@ -80,7 +80,7 @@ export function trackViews(
   configuration: RumConfiguration,
   locationChangeObservable: Observable<LocationChange>,
   areViewsTrackedAutomatically: boolean,
-  recorderApi: RecorderApi,
+  webVitalTelemetryDebug: WebVitalTelemetryDebug,
   initialViewOptions?: ViewOptions
 ) {
   let currentView = startNewView(ViewLoadingType.INITIAL_LOAD, clocksOrigin(), initialViewOptions)
@@ -99,7 +99,7 @@ export function trackViews(
       configuration,
       location,
       loadingType,
-      recorderApi,
+      webVitalTelemetryDebug,
       startClocks,
       viewOptions
     )
@@ -157,7 +157,7 @@ function newView(
   configuration: RumConfiguration,
   initialLocation: Location,
   loadingType: ViewLoadingType,
-  recorderApi: RecorderApi,
+  webVitalTelemetryDebug: WebVitalTelemetryDebug,
   startClocks: ClocksState = clocksNow(),
   viewOptions?: ViewOptions
 ) {
@@ -207,12 +207,12 @@ function newView(
     scheduleViewUpdate,
     loadingType,
     startClocks,
-    recorderApi
+    webVitalTelemetryDebug
   )
 
   const { scheduleStop: scheduleStopInitialViewTimingsTracking, timings } =
     loadingType === ViewLoadingType.INITIAL_LOAD
-      ? trackInitialViewTimings(lifeCycle, recorderApi, setLoadEvent, scheduleViewUpdate)
+      ? trackInitialViewTimings(lifeCycle, webVitalTelemetryDebug, setLoadEvent, scheduleViewUpdate)
       : { scheduleStop: noop, timings: {} as Timings }
 
   const { scheduleStop: scheduleStopEventCountsTracking, eventCounts } = trackViewEventCounts(
