@@ -94,6 +94,14 @@ export function makeRumPublicApi(
     bufferApiCalls.add(() => addErrorStrategy(providedError, commonContext))
   }
 
+  let recorderStartStrategy: typeof recorderApi.start = () => {
+    bufferApiCalls.add(() => recorderStartStrategy())
+  }
+
+  let recorderStopStrategy: typeof recorderApi.stop = () => {
+    bufferApiCalls.add(() => recorderStopStrategy())
+  }
+
   let addFeatureFlagEvaluationStrategy: StartRumResult['addFeatureFlagEvaluation'] = (key: string, value: any) => {
     bufferApiCalls.add(() => addFeatureFlagEvaluationStrategy(key, value))
   }
@@ -162,6 +170,8 @@ export function makeRumPublicApi(
     )
     getSessionReplayLinkStrategy = () =>
       recorderApi.getSessionReplayLink(configuration, startRumResults.session, startRumResults.viewContexts)
+    recorderStartStrategy = recorderApi.start
+    recorderStopStrategy = recorderApi.stop
     ;({
       startView: startViewStrategy,
       addAction: addActionStrategy,
@@ -171,7 +181,6 @@ export function makeRumPublicApi(
       getInternalContext: getInternalContextStrategy,
       stopSession: stopSessionStrategy,
     } = startRumResults)
-    bufferApiCalls.drain()
 
     recorderApi.onRumStart(
       startRumResults.lifeCycle,
@@ -179,6 +188,7 @@ export function makeRumPublicApi(
       startRumResults.session,
       startRumResults.viewContexts
     )
+    bufferApiCalls.drain()
   }
 
   const startView: {
@@ -192,20 +202,12 @@ export function makeRumPublicApi(
   const rumPublicApi = makePublicApi({
     init: monitor(initRum),
 
-    /** @deprecated: use setGlobalContextProperty instead */
-    addRumGlobalContext: monitor(globalContextManager.add),
     setGlobalContextProperty: monitor(globalContextManager.setContextProperty),
 
-    /** @deprecated: use removeGlobalContextProperty instead */
-    removeRumGlobalContext: monitor(globalContextManager.remove),
     removeGlobalContextProperty: monitor(globalContextManager.removeContextProperty),
 
-    /** @deprecated: use getGlobalContext instead */
-    getRumGlobalContext: monitor(globalContextManager.get),
     getGlobalContext: monitor(globalContextManager.getContext),
 
-    /** @deprecated: use setGlobalContext instead */
-    setRumGlobalContext: monitor(globalContextManager.set),
     setGlobalContext: monitor(globalContextManager.setContext),
 
     clearGlobalContext: monitor(globalContextManager.clearContext),
@@ -253,8 +255,6 @@ export function makeRumPublicApi(
 
     removeUserProperty: monitor(userContextManager.removeContextProperty),
 
-    /** @deprecated: renamed to clearUser */
-    removeUser: monitor(userContextManager.clearContext),
     clearUser: monitor(userContextManager.clearContext),
 
     startView,
@@ -263,8 +263,8 @@ export function makeRumPublicApi(
       stopSessionStrategy()
     }),
 
-    startSessionReplayRecording: monitor(recorderApi.start),
-    stopSessionReplayRecording: monitor(recorderApi.stop),
+    startSessionReplayRecording: monitor(() => recorderStartStrategy()),
+    stopSessionReplayRecording: monitor(() => recorderStopStrategy()),
 
     /**
      * This feature is currently in beta. For more information see the full [feature flag tracking guide](https://docs.datadoghq.com/real_user_monitoring/feature_flag_tracking/).

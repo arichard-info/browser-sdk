@@ -329,6 +329,38 @@ describe('rum assembly', () => {
         expect(displaySpy).toHaveBeenCalledWith("Can't dismiss view events using beforeSend!")
       })
     })
+
+    it('should not dismiss when true is returned', () => {
+      const { lifeCycle } = setupBuilder
+        .withConfiguration({
+          beforeSend: () => true,
+        })
+        .build()
+
+      notifyRawRumEvent(lifeCycle, {
+        rawRumEvent: createRawRumEvent(RumEventType.ACTION, {
+          view: { id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+        }),
+      })
+
+      expect(serverRumEvents.length).toBe(1)
+    })
+
+    it('should not dismiss when undefined is returned', () => {
+      const { lifeCycle } = setupBuilder
+        .withConfiguration({
+          beforeSend: () => undefined,
+        })
+        .build()
+
+      notifyRawRumEvent(lifeCycle, {
+        rawRumEvent: createRawRumEvent(RumEventType.ACTION, {
+          view: { id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+        }),
+      })
+
+      expect(serverRumEvents.length).toBe(1)
+    })
   })
 
   describe('rum context', () => {
@@ -635,7 +667,7 @@ describe('rum assembly', () => {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
       expect(serverRumEvents[0]._dd.configuration).toEqual({
-        session_replay_sample_rate: 100,
+        session_replay_sample_rate: 0,
         session_sample_rate: 100,
       })
     })

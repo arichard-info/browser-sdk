@@ -64,7 +64,7 @@ export function makeRecorderApi(
   }
 
   let state: RecorderState = {
-    status: RecorderStatus.Stopped,
+    status: RecorderStatus.IntentToStart,
   }
 
   let startStrategy = () => {
@@ -87,6 +87,9 @@ export function makeRecorderApi(
       sessionManager: RumSessionManager,
       viewContexts: ViewContexts
     ) => {
+      if (configuration.startSessionReplayRecordingManually) {
+        state = { status: RecorderStatus.Stopped }
+      }
       lifeCycle.subscribe(LifeCycleEventType.SESSION_EXPIRED, () => {
         if (state.status === RecorderStatus.Starting || state.status === RecorderStatus.Started) {
           stopStrategy()
