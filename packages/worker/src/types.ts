@@ -9,15 +9,13 @@ export type DeflateWorkerAction =
   | {
       action: 'write'
       id: number
+      streamId: number
       data: string
     }
-  // Action to send when finishing to write some data. The worker will respond with a 'flushed'
-  // response, with the same id, measurements of the wrote data bytes count and the complete deflate
-  // data.
+  // Action to send when all data has been written and the state of the stream needs to be reset.
   | {
-      action: 'flush'
-      id: number
-      data?: string
+      action: 'reset'
+      streamId: number
     }
 
 export type DeflateWorkerResponse =
@@ -29,19 +27,14 @@ export type DeflateWorkerResponse =
   | {
       type: 'wrote'
       id: number
-      compressedBytesCount: number
-      additionalBytesCount: number
-    }
-  // Response to 'flush' action
-  | {
-      type: 'flushed'
-      id: number
+      streamId: number
       result: Uint8Array
+      trailer: Uint8Array
       additionalBytesCount: number
-      rawBytesCount: number
     }
   // Could happen at any time when something goes wrong in the worker
   | {
       type: 'errored'
+      streamId?: number
       error: Error | string
     }
