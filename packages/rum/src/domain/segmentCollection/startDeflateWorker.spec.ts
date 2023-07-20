@@ -183,94 +183,146 @@ describe('createDeflateWorker', () => {
       pending('no TextEncoder support')
     }
   })
-  it('buffers data and responds with the buffer deflated compressedBytesCount when writing', (done) => {
+
+  // Zlib streams using a default compression are starting with bytes 120 156 (0x78 0x9c)
+  // https://stackoverflow.com/a/9050274
+  const STREAM_START = [120, 156]
+
+  // Deflate block generated when compressing "foo" alone
+  const FOO_COMPRESSED = [74, 203, 207, 7, 0, 0, 0, 255, 255]
+  // Zlib trailer when finishing the stream after compressing "foo"
+  const FOO_COMPRESSED_TRAILER = [3, 0, 2, 130, 1, 69] // empty deflate block + adler32 checksum
+
+  // Deflate block generated when compressing "bar" alone
+  const BAR_COMPRESSED = [74, 74, 44, 2, 0, 0, 0, 255, 255]
+  // Zlib trailer when finishing the stream after compressing "bar"
+  const BAR_COMPRESSED_TRAILER = [3, 0, 2, 93, 1, 54]
+
+  // Deflate block generated when compressing "baz" alone
+  const BAZ_COMPRESSED = [74, 74, 172, 2, 0, 0, 0, 255, 255]
+
+  // Zlib trailer when finishing the stream after compressing "foo" then "bar"
+  const FOO_BAR_COMPRESSED_TRAILER = [3, 0, 8, 171, 2, 122]
+  // Zlib trailer when finishing the stream after compressing "foo" then "bar" then "baz"
+  const FOO_BAR_BAZ_COMPRESSED_TRAILER = [3, 0, 18, 123, 3, 183]
+  // Zlib trailer when finishing the stream after compressing "foo" then "baz"
+  const FOO_BAZ_COMPRESSED_TRAILER = [3, 0, 8, 179, 2, 130]
+
+  it('buffers data and responds with the buffer deflated result when writing', (done) => {
     const deflateWorker = createDeflateWorker()
     listen(deflateWorker, 3, (events) => {
-      expect(events).toEqual([
-        { type: 'wrote', id: 0, compressedBytesCount: 11, additionalBytesCount: 3 },
-        { type: 'wrote', id: 1, compressedBytesCount: 20, additionalBytesCount: 3 },
-        { type: 'wrote', id: 2, compressedBytesCount: 29, additionalBytesCount: 3 },
-      ])
-      done()
-    })
-    deflateWorker.postMessage({ id: 0, action: 'write', data: 'foo' })
-    deflateWorker.postMessage({ id: 1, action: 'write', data: 'bar' })
-    deflateWorker.postMessage({ id: 2, action: 'write', data: 'baz' })
-  })
-
-  it('responds with the resulting bytes when completing', (done) => {
-    const deflateWorker = createDeflateWorker()
-    listen(deflateWorker, 2, (events) => {
-      expect(events).toEqual([
-        { type: 'wrote', id: 0, compressedBytesCount: 11, additionalBytesCount: 3 },
-        {
-          type: 'flushed',
-          id: 1,
-          result: new Uint8Array([120, 156, 74, 203, 207, 7, 0, 0, 0, 255, 255, 3, 0, 2, 130, 1, 69]),
-          additionalBytesCount: 0,
-          rawBytesCount: 3,
-        },
-      ])
-      done()
-    })
-    deflateWorker.postMessage({ id: 0, action: 'write', data: 'foo' })
-    deflateWorker.postMessage({ id: 1, action: 'flush' })
-  })
-
-  it('writes the remaining data specified by "flush"', (done) => {
-    const deflateWorker = createDeflateWorker()
-    listen(deflateWorker, 1, (events) => {
-      expect(events).toEqual([
-        {
-          type: 'flushed',
-          id: 0,
-          result: new Uint8Array([120, 156, 74, 203, 207, 7, 0, 0, 0, 255, 255, 3, 0, 2, 130, 1, 69]),
-          additionalBytesCount: 3,
-          rawBytesCount: 3,
-        },
-      ])
-      done()
-    })
-    deflateWorker.postMessage({ id: 0, action: 'flush', data: 'foo' })
-  })
-
-  it('flushes several deflates one after the other', (done) => {
-    const deflateWorker = createDeflateWorker()
-    listen(deflateWorker, 4, (events) => {
       expect(events).toEqual([
         {
           type: 'wrote',
           id: 0,
-          compressedBytesCount: 11,
+          streamId: 1,
+          result: new Uint8Array([...STREAM_START, ...FOO_COMPRESSED]),
+          trailer: new Uint8Array(FOO_COMPRESSED_TRAILER),
           additionalBytesCount: 3,
         },
         {
-          type: 'flushed',
+          type: 'wrote',
           id: 1,
-          result: new Uint8Array([120, 156, 74, 203, 207, 7, 0, 0, 0, 255, 255, 3, 0, 2, 130, 1, 69]),
-          additionalBytesCount: 0,
-          rawBytesCount: 3,
+          streamId: 1,
+          result: new Uint8Array(BAR_COMPRESSED),
+          trailer: new Uint8Array(FOO_BAR_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
         },
         {
           type: 'wrote',
           id: 2,
-          compressedBytesCount: 11,
+          streamId: 1,
+          result: new Uint8Array(BAZ_COMPRESSED),
+          trailer: new Uint8Array(FOO_BAR_BAZ_COMPRESSED_TRAILER),
           additionalBytesCount: 3,
-        },
-        {
-          type: 'flushed',
-          id: 3,
-          result: new Uint8Array([120, 156, 74, 74, 44, 2, 0, 0, 0, 255, 255, 3, 0, 2, 93, 1, 54]),
-          additionalBytesCount: 0,
-          rawBytesCount: 3,
         },
       ])
       done()
     })
-    deflateWorker.postMessage({ id: 0, action: 'write', data: 'foo' })
-    deflateWorker.postMessage({ id: 1, action: 'flush' })
-    deflateWorker.postMessage({ id: 2, action: 'write', data: 'bar' })
-    deflateWorker.postMessage({ id: 3, action: 'flush' })
+    deflateWorker.postMessage({ id: 0, streamId: 1, action: 'write', data: 'foo' })
+    deflateWorker.postMessage({ id: 1, streamId: 1, action: 'write', data: 'bar' })
+    deflateWorker.postMessage({ id: 2, streamId: 1, action: 'write', data: 'baz' })
+  })
+
+  it('resets the stream state', (done) => {
+    const deflateWorker = createDeflateWorker()
+    listen(deflateWorker, 2, (events) => {
+      expect(events).toEqual([
+        {
+          type: 'wrote',
+          id: 0,
+          streamId: 1,
+          result: new Uint8Array([...STREAM_START, ...FOO_COMPRESSED]),
+          trailer: new Uint8Array(FOO_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
+        },
+        {
+          type: 'wrote',
+          id: 1,
+          streamId: 1,
+          // As the result starts with the beginning of a stream, we are sure that `reset` was
+          // effective
+          result: new Uint8Array([...STREAM_START, ...BAR_COMPRESSED]),
+          trailer: new Uint8Array(BAR_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
+        },
+      ])
+      done()
+    })
+    deflateWorker.postMessage({ action: 'write', id: 0, streamId: 1, data: 'foo' })
+    deflateWorker.postMessage({ action: 'reset', streamId: 1 })
+    deflateWorker.postMessage({ action: 'write', id: 1, streamId: 1, data: 'bar' })
+    deflateWorker.postMessage({ action: 'reset', streamId: 1 })
+  })
+
+  it('support writing to different streams at the same time', (done) => {
+    const deflateWorker = createDeflateWorker()
+    listen(deflateWorker, 3, (events) => {
+      expect(events).toEqual([
+        {
+          type: 'wrote',
+          id: 0,
+          streamId: 1,
+          result: new Uint8Array([...STREAM_START, ...FOO_COMPRESSED]),
+          trailer: new Uint8Array(FOO_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
+        },
+        {
+          type: 'wrote',
+          id: 1,
+          streamId: 2,
+          result: new Uint8Array([...STREAM_START, ...BAR_COMPRESSED]),
+          trailer: new Uint8Array(BAR_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
+        },
+        {
+          type: 'wrote',
+          id: 2,
+          streamId: 1,
+          result: new Uint8Array(BAZ_COMPRESSED),
+          trailer: new Uint8Array(FOO_BAZ_COMPRESSED_TRAILER),
+          additionalBytesCount: 3,
+        },
+      ])
+      done()
+    })
+    deflateWorker.postMessage({ id: 0, streamId: 1, action: 'write', data: 'foo' })
+    deflateWorker.postMessage({ id: 1, streamId: 2, action: 'write', data: 'bar' })
+    deflateWorker.postMessage({ streamId: 2, action: 'reset' })
+    deflateWorker.postMessage({ id: 2, streamId: 1, action: 'write', data: 'baz' })
+  })
+
+  it('reports an error when an unexpected exception occurs', (done) => {
+    const deflateWorker = createDeflateWorker()
+    listen(deflateWorker, 1, (events) => {
+      const event = events[0] as Extract<DeflateWorkerResponse, { type: 'errored' }>
+      expect(event.type).toBe('errored')
+      // Some browsers are able to transmit the error instance, some are sending only the message
+      // as a string
+      expect(String(event.error)).toEqual(jasmine.stringContaining('TypeError'))
+      done()
+    })
+    deflateWorker.postMessage(null as any)
   })
 
   function listen(
