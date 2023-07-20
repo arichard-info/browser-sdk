@@ -72,6 +72,7 @@ export class MockWorker implements DeflateWorker {
               createNewEvent('message', {
                 data: {
                   type: 'initialized',
+                  version: 'dev',
                 },
               })
             )
