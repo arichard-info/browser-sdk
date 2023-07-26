@@ -3673,6 +3673,7 @@ __metadata:
     "@wdio/spec-reporter": 8.12.2
     ajv: 6.12.6
     browserstack-local: 1.5.3
+    chrome-webstore-upload: 1.0.0
     connect-busboy: 1.0.0
     cors: 2.8.5
     emoji-name-map: 1.2.9
@@ -4167,6 +4168,15 @@ __metadata:
   dependencies:
     tslib: ^1.9.0
   checksum: a104606fd07e6191848fa15d4031ac41c1715d025074574bdbb27d998a20d75d860a2060a5aca840bfbf97ec2ef6b72df9b387ed4109a8fc6eb5c362477c9294
+  languageName: node
+  linkType: hard
+
+"chrome-webstore-upload@npm:1.0.0":
+  version: 1.0.0
+  resolution: "chrome-webstore-upload@npm:1.0.0"
+  dependencies:
+    got: ^11.8.2
+  checksum: 7fade5b84ca349b987e8c98865ed5bfe83007e1fb550a598e09a13b36aa76e7da6a5864bd153b1966d8061b6f8af89766697438f4a984cc292dbe14e009f1e19
   languageName: node
   linkType: hard
 
