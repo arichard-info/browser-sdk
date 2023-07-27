@@ -595,6 +595,24 @@ describe('serializeNodeWithId', () => {
       })
     })
 
+    it('does not inline external style sheets when DISABLE_REPLAY_INLINE_CSS is enabled', () => {
+      addExperimentalFeatures([ExperimentalFeature.DISABLE_REPLAY_INLINE_CSS])
+      const linkNode = document.createElement('link')
+      linkNode.setAttribute('rel', 'stylesheet')
+      linkNode.setAttribute('href', 'https://datadoghq.com/some/style.css')
+      isolatedDom.document.head.appendChild(linkNode)
+      Object.defineProperty(isolatedDom.document, 'styleSheets', {
+        value: [
+          {
+            href: 'https://datadoghq.com/some/style.css',
+            cssRules: [{ cssText: 'body { width: 100%; }' }],
+          },
+        ],
+      })
+
+      expect((serializeNodeWithId(linkNode, DEFAULT_OPTIONS) as ElementNode).attributes._cssText).toBeUndefined()
+    })
+
     it('serializes style node with dynamic CSS that can be fetched with DISABLE_REPLAY_INLINE_CSS false', () => {
       addExperimentalFeatures([ExperimentalFeature.DISABLE_REPLAY_INLINE_CSS])
       const linkNode = document.createElement('link')
