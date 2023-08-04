@@ -15,6 +15,7 @@ import { isTelemetryEvent, isLogEvent, isRumEvent } from '../../../sdkEvent'
 import { formatDuration } from '../../../formatNumber'
 import { Json } from '../../json'
 import { LazyCollapse } from '../../lazyCollapse'
+import { Grid } from './grid'
 
 const RUM_EVENT_TYPE_COLOR = {
   action: 'violet',
@@ -45,12 +46,12 @@ const RESOURCE_TYPE_LABELS: Record<string, string | undefined> = {
   other: 'Other',
 }
 
-export function EventRow({ event }: { event: SdkEvent }) {
+export const EventRow = React.memo(({ event }: { event: SdkEvent }) => {
   const [isCollapsed, setIsCollapsed] = useState(true)
   const jsonRef = useRef<HTMLDivElement>(null)
 
   return (
-    <tr
+    <Grid.Row
       onClick={(event) => {
         if (jsonRef.current?.contains(event.target as Node)) {
           // Ignore clicks on the collapsible area
@@ -59,8 +60,8 @@ export function EventRow({ event }: { event: SdkEvent }) {
         setIsCollapsed((previous) => !previous)
       }}
     >
-      <td width="20">{new Date(event.date).toLocaleTimeString()}</td>
-      <td width="20">
+      <Grid.Cell>{new Date(event.date).toLocaleTimeString()}</Grid.Cell>
+      <Grid.Cell center>
         {isRumEvent(event) || isTelemetryEvent(event) ? (
           <Badge variant="outline" color={RUM_EVENT_TYPE_COLOR[event.type]}>
             {event.type}
@@ -70,16 +71,16 @@ export function EventRow({ event }: { event: SdkEvent }) {
             {event.origin as string} {event.status as string}
           </Badge>
         )}
-      </td>
-      <td>
+      </Grid.Cell>
+      <Grid.Cell>
         <EventDescription event={event} />
         <LazyCollapse in={!isCollapsed}>
           <Json ref={jsonRef} value={event} defaultCollapseLevel={0} />
         </LazyCollapse>
-      </td>
-    </tr>
+      </Grid.Cell>
+    </Grid.Row>
   )
-}
+})
 
 export const EventDescription = React.memo(({ event }: { event: SdkEvent }) => {
   if (isRumEvent(event)) {
