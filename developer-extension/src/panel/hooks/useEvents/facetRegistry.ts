@@ -5,12 +5,14 @@ import { FACETS, type FacetId, type FacetValue } from '../../facets.constants'
 const logger = createLogger('facetRegistry')
 
 type FieldPath = string
-type FieldValue = string | number | null | boolean
+type FieldValue = string | number | null | boolean | object
 type FieldMultiValue = FieldValue | FieldValue[]
 
 export class FacetRegistry {
   facetValueCounts: Map<FacetId, Map<FacetValue, number>> = new Map(FACETS.map((facet) => [facet.id, new Map()]))
   eventFacetsCache: WeakMap<SdkEvent, Map<FacetId, FacetValue>> = new WeakMap()
+  eventFieldsCache: WeakMap<SdkEvent, Map<FieldPath, FieldMultiValue>> = new WeakMap()
+  allEventFieldPaths: Set<FieldPath> = new Set()
 
   addEvent(event: SdkEvent) {
     const fields = getAllFields(event)
@@ -40,18 +42,32 @@ export class FacetRegistry {
     }
 
     this.eventFacetsCache.set(event, facetsCache)
+    this.eventFieldsCache.set(event, fields)
+
+    for (const fieldPath of fields.keys()) {
+      this.allEventFieldPaths.add(fieldPath)
+    }
   }
 
   getFacetValueForEvent(event: SdkEvent, facetId: FacetId): FacetValue | undefined {
     return this.eventFacetsCache.get(event)?.get(facetId)
   }
 
+  getFieldValueForEvent(event: SdkEvent, path: FieldPath): FieldMultiValue | undefined {
+    return this.eventFieldsCache.get(event)?.get(path)
+  }
+
   getFacetValueCounts(facetId: FacetId): Map<FacetValue, number> {
     return this.facetValueCounts.get(facetId)!
   }
 
+  getAllFieldPaths() {
+    return this.allEventFieldPaths
+  }
+
   clear() {
     this.facetValueCounts = new Map(FACETS.map((facet) => [facet.id, new Map()]))
+    this.allEventFieldPaths.clear()
   }
 }
 
@@ -68,6 +84,9 @@ export function getAllFields(event: object) {
         getAllFieldsRec(item, path)
       }
     } else if (typeof value === 'object' && value !== null) {
+      if (path !== undefined) {
+        pushField(path, value)
+      }
       for (const key in value) {
         if (Object.prototype.hasOwnProperty.call(value, key)) {
           const itemPath = path === undefined ? key : `${path}.${key}`
@@ -79,16 +98,20 @@ export function getAllFields(event: object) {
       path !== undefined &&
       (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null)
     ) {
-      const previousValue = fields.get(path)
-      if (Array.isArray(previousValue)) {
-        previousValue.push(value)
-      } else if (previousValue !== undefined) {
-        fields.set(path, [previousValue, value])
-      } else {
-        fields.set(path, value)
-      }
+      pushField(path, value)
     } else {
       logger.error(`Unexpected value type at ${path || '<root>'}`, value)
+    }
+  }
+
+  function pushField(path: FieldPath, value: FieldValue) {
+    const previousValue = fields.get(path)
+    if (Array.isArray(previousValue)) {
+      previousValue.push(value)
+    } else if (previousValue !== undefined) {
+      fields.set(path, [previousValue, value])
+    } else {
+      fields.set(path, value)
     }
   }
 }
