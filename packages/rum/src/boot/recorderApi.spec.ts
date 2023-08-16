@@ -1,10 +1,12 @@
-import { isIE, noop } from '@datadog/browser-core'
+import { display, isIE } from '@datadog/browser-core'
 import type { RecorderApi, ViewContexts, LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
 import { LifeCycleEventType } from '@datadog/browser-rum-core'
 import { deleteEventBridgeStub, initEventBridgeStub, createNewEvent } from '@datadog/browser-core/test'
 import type { RumSessionManagerMock, TestSetupBuilder } from '../../../rum-core/test'
 import { createRumSessionManagerMock, setup } from '../../../rum-core/test'
-import type { DeflateWorker, startDeflateWorker } from '../domain/segmentCollection'
+import type { CreateDeflateWorker } from '../domain/deflate'
+import { MockWorker } from '../../test'
+import { resetDeflateWorkerState } from '../domain/deflate'
 import type { StartRecording } from './recorderApi'
 import { makeRecorderApi } from './recorderApi'
 
@@ -13,23 +15,8 @@ describe('makeRecorderApi', () => {
   let recorderApi: RecorderApi
   let startRecordingSpy: jasmine.Spy<StartRecording>
   let stopRecordingSpy: jasmine.Spy<() => void>
-  let startDeflateWorkerSpy: jasmine.Spy<typeof startDeflateWorker>
-  const FAKE_WORKER = {} as DeflateWorker
-
-  function startDeflateWorkerWith(worker?: DeflateWorker) {
-    if (!startDeflateWorkerSpy) {
-      startDeflateWorkerSpy = jasmine.createSpy<typeof startDeflateWorker>('startDeflateWorker')
-    }
-    startDeflateWorkerSpy.and.callFake((_, callback) => callback(worker))
-  }
-
-  function callLastRegisteredInitialisationCallback() {
-    startDeflateWorkerSpy.calls.mostRecent().args[1](FAKE_WORKER)
-  }
-
-  function stopDeflateWorker() {
-    startDeflateWorkerSpy.and.callFake(noop)
-  }
+  let mockWorker: MockWorker
+  let createDeflateWorkerSpy: jasmine.Spy<CreateDeflateWorker>
 
   let rumInit: () => void
 
@@ -37,14 +24,17 @@ describe('makeRecorderApi', () => {
     if (isIE()) {
       pending('IE not supported')
     }
+    mockWorker = new MockWorker()
+    createDeflateWorkerSpy = jasmine.createSpy('createDeflateWorkerSpy').and.callFake(() => mockWorker)
+    spyOn(display, 'error')
+
     setupBuilder = setup().beforeBuild(({ lifeCycle, sessionManager }) => {
       stopRecordingSpy = jasmine.createSpy('stopRecording')
       startRecordingSpy = jasmine.createSpy('startRecording').and.callFake(() => ({
         stop: stopRecordingSpy,
       }))
 
-      startDeflateWorkerWith(FAKE_WORKER)
-      recorderApi = makeRecorderApi(startRecordingSpy, startDeflateWorkerSpy)
+      recorderApi = makeRecorderApi(startRecordingSpy, createDeflateWorkerSpy)
       rumInit = () => {
         recorderApi.onRumStart(lifeCycle, {} as RumConfiguration, sessionManager, {} as ViewContexts)
       }
@@ -53,6 +43,7 @@ describe('makeRecorderApi', () => {
 
   afterEach(() => {
     setupBuilder.cleanup()
+    resetDeflateWorkerState()
   })
 
   describe('boot', () => {
@@ -115,25 +106,22 @@ describe('makeRecorderApi', () => {
       expect(startRecordingSpy).not.toHaveBeenCalled()
     })
 
-    it('do not start recording if worker fails to be instantiated', () => {
+    it('do not start recording if worker creation fails', () => {
       setupBuilder.build()
       rumInit()
-      startDeflateWorkerWith(undefined)
+      createDeflateWorkerSpy.and.throwError('Crash')
       recorderApi.start()
       expect(startRecordingSpy).not.toHaveBeenCalled()
     })
 
-    it('does not start recording multiple times if restarted before worker is initialized', () => {
+    it('stops recording if worker initialization fails', () => {
       setupBuilder.build()
       rumInit()
-      stopDeflateWorker()
       recorderApi.start()
-      recorderApi.stop()
 
-      callLastRegisteredInitialisationCallback()
-      recorderApi.start()
-      callLastRegisteredInitialisationCallback()
-      expect(startRecordingSpy).toHaveBeenCalledTimes(1)
+      mockWorker.dispatchErrorEvent()
+
+      expect(stopRecordingSpy).toHaveBeenCalled()
     })
 
     describe('if event bridge present', () => {
@@ -394,24 +382,54 @@ describe('makeRecorderApi', () => {
   })
 
   describe('isRecording', () => {
-    it('is true only if recording', () => {
+    it('is false when recording has not been started', () => {
       setupBuilder.build()
       rumInit()
+
       expect(recorderApi.isRecording()).toBeFalse()
+    })
+
+    it('is false when the worker is not yet initialized', () => {
+      setupBuilder.build()
+      rumInit()
+
       recorderApi.start()
-      expect(recorderApi.isRecording()).toBeTrue()
-      recorderApi.stop()
       expect(recorderApi.isRecording()).toBeFalse()
+    })
+
+    it('is false when the worker failed to initialize', () => {
+      setupBuilder.build()
+      rumInit()
+
+      recorderApi.start()
+      mockWorker.dispatchErrorEvent()
+
+      expect(recorderApi.isRecording()).toBeFalse()
+    })
+
+    it('is true when recording is started and the worker is initialized', () => {
+      setupBuilder.build()
+      rumInit()
+
+      recorderApi.start()
+      mockWorker.processAllMessages()
+
+      expect(recorderApi.isRecording()).toBeTrue()
     })
 
     it('is false before the DOM is loaded', () => {
       setupBuilder.build()
       const { triggerOnDomLoaded } = mockDocumentReadyState()
       rumInit()
-      expect(recorderApi.isRecording()).toBeFalse()
+
       recorderApi.start()
+      mockWorker.processAllMessages()
+
       expect(recorderApi.isRecording()).toBeFalse()
+
       triggerOnDomLoaded()
+      mockWorker.processAllMessages()
+
       expect(recorderApi.isRecording()).toBeTrue()
     })
   })
