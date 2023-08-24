@@ -42,7 +42,7 @@ export interface DeflateWorker extends Worker {
 
 export type CreateDeflateWorker = typeof createDeflateWorker
 
-export function createDeflateWorker(configuration: RumConfiguration): DeflateWorker {
+function createDeflateWorker(configuration: RumConfiguration): DeflateWorker {
   return new Worker(configuration.workerUrl || URL.createObjectURL(new Blob([__BUILD_ENV__WORKER_STRING__])))
 }
 
