@@ -479,11 +479,8 @@ describe('logs entry', () => {
     let logsPublicApi: LogsPublicApi
 
     beforeEach(() => {
-      logsPublicApi = makeLogsPublicApi(startLogs)
-    })
-
-    afterEach(() => {
       localStorage.clear()
+      logsPublicApi = makeLogsPublicApi(startLogs)
     })
 
     it('when disabled, should store contexts only in memory', () => {

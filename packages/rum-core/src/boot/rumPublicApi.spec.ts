@@ -876,11 +876,8 @@ describe('rum public api', () => {
     let rumPublicApi: RumPublicApi
 
     beforeEach(() => {
-      rumPublicApi = makeRumPublicApi(noopStartRum, noopRecorderApi)
-    })
-
-    afterEach(() => {
       localStorage.clear()
+      rumPublicApi = makeRumPublicApi(noopStartRum, noopRecorderApi)
     })
 
     it('when disabled, should store contexts only in memory', () => {
